@@ -87,11 +87,20 @@ supplied. `for n > 1` says how many to supply; otherwise the caller must allow t
 #guard why "a(n) = n*n" [0, 1, 4, 99, 16] 3 == "value mismatch at point 3: expected 99, got 9"
 #guard trace "a(n) = n*n" [0, 1, 4, 9, 16] == "....."
 
-/-! ### Not everything can be checked -/
+/-! ### Not everything can be checked
 
-#guard decl "a = sum{k>=1} 1/k^2" [1] 0 #[{ args := [], ret := .real }] == "<none>"
-#guard why "a = sum{k>=1} 1/k^2" [1] 0 #[{ args := [], ret := .real }]
-  == "not computable, cannot be checked against data"
+A reading that cannot be run is still returned, flagged and unverified; it is up to the caller
+whether to keep it. A computable reading that fails is never replaced by an unrunnable one. -/
+
+private def first (s : String) (vs : List Int) (types : Array FnTy) : Option Item :=
+  (analyze (req s vs 0 types)).items[0]?
+
+#guard (first "a = sum{k>=1} 1/k^2" [1] #[{ args := [], ret := .real }]).map
+    (fun i => (i.computable, i.report.accepted, i.report.reason.map Reject.describe))
+  == some (false, false, some "not computable, cannot be checked against data")
+#guard (first "a = sum{k>=1} 1/k^2" [1] #[{ args := [], ret := .real }]).map (·.decl)
+  == some "noncomputable def a : ℝ :=\n  ∑' k : ℕ, 1 / (k + 1 : ℝ) ^ 2"
+#guard decl "a(n) = n*n" [0, 1, 4, 99, 16] == "<none>"
 
 /-! ### Reported spans cover exactly the parts used -/
 

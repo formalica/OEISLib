@@ -40,10 +40,10 @@ def leanHas (n : Nat) (names : List String) (want : FnTy) (s : String) (expected
   ((typings [] names want s).take n).any fun t => renderBody {} t == expected
 
 def leanDef (names : List String) (want : FnTy) (s : String) (nm : String)
-    (bases : Array String := #[]) : String :=
+    (patched : Array (Array Int × Int) := #[]) : String :=
   match typings [] names want s with
   | [] => "<none>"
-  | t :: _ => renderDef {} t nm bases
+  | t :: _ => renderDef {} t nm patched
 
 def N : FnTy := { args := [.nat], ret := .nat }
 def NZ : FnTy := { args := [.nat], ret := .int }
@@ -114,8 +114,19 @@ A big operator's body extends to the right, so one used as an operand is always 
 
 -- The body is stored name-free, so it can be re-rendered under any name.
 #guard lean ["a"] N "a(n) = a(n-1)+n^2 for n > 1" == "«self» (n - 1) + n ^ 2"
-#guard leanDef ["a"] N "a(n) = a(n-1)+n^2" "A000330" #["0", "1"]
+#guard leanDef ["a"] N "a(n) = a(n-1)+n^2" "A000330" #[(#[0], 0), (#[1], 1)]
   == "def A000330 : ℕ → ℕ\n  | 0 => 0\n  | 1 => 1\n  | n + 2 => A000330 (n + 1) + (n + 2) ^ 2"
+
+-- Base cases are keyed by their argument, so data starting at 1 does not shift onto 0; the
+-- index below the data gets a junk arm only because structural recursion needs one.
+#guard leanDef ["a"] N "a(n) = a(n-1)+n^2" "A000330" #[(#[1], 1)]
+  == "def A000330 : ℕ → ℕ\n  | 0 => 0\n  | 1 => 1\n  | n + 2 => A000330 (n + 1) + (n + 2) ^ 2"
+
+-- Without recursion there is nothing to shift, so a patched value is just an earlier arm.
+#guard leanDef ["a"] N "a(n) = n - 1" "f" #[(#[0], 7)]
+  == "def f : ℕ → ℕ\n  | 0 => 7\n  | n => n - 1"
+#guard leanDef ["a"] { args := [.int], ret := .int } "a(n) = n*n" "f" #[(#[-1], 5)]
+  == "def f (n : ℤ) : ℤ :=\n  if n = (-1) then 5 else n * n"
 #guard leanDef ["a"] N "a(n) = 3n^2 - 7*n + 6" "A000567"
   == "def A000567 (n : ℕ) : ℕ :=\n  3 * n ^ 2 + 6 - 7 * n"
 #guard leanDef ["g"] R "g = sum{k>=1} 1/k^2" "zeta2"

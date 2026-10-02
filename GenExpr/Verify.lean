@@ -10,6 +10,10 @@ itself said so (`for n > 1`). A failure in the middle rejects the candidate outr
 
 Points that time out, or that depend on a value no table knows, never count as failures — they
 just do not count as evidence either, so they lower the success rate.
+
+The policy is written once, in `runPolicy`, over an abstract point evaluator. The interpreter
+here and the Lean backend in `GenExpr.LeanEngine` only differ in how one point is evaluated, so
+the two engines cannot drift apart on *what* counts as verified.
 -/
 
 namespace GenExpr
@@ -17,8 +21,9 @@ namespace GenExpr
 /-- Which backend checks the values.
 
 The interpreter has real step budgets, which a compiled Lean term cannot offer, so it is the
-default; `lean` is the ground truth; `crossCheck` asserts the two agree and is what keeps the two
-semantics from drifting. -/
+default for the pure API; `lean` checks the declaration exactly as emitted; `internalThenLean`
+uses the interpreter to choose and Lean to confirm; `crossCheck` runs both independently and
+rejects on any disagreement, which is what keeps the two semantics from drifting. -/
 inductive Engine where
   | internal
   | lean
@@ -35,9 +40,9 @@ def ofString? : String → Option Engine
   | "crossCheck" => some .crossCheck
   | _ => none
 
-def usesInternal : Engine → Bool
-  | .lean => false
-  | _ => true
+def name : Engine → String
+  | .internal => "internal" | .lean => "lean" | .internalThenLean => "internalThenLean"
+  | .crossCheck => "crossCheck"
 
 def usesLean : Engine → Bool
   | .internal => false
@@ -67,6 +72,11 @@ namespace PointStatus
 def symbol : PointStatus → String
   | .pass => "." | .patched => "b" | .fail _ => "X" | .unknown => "?" | .timeout => "t"
 
+/-- Whether the point counts as evidence for the formula. -/
+def isGood : PointStatus → Bool
+  | .pass | .patched => true
+  | _ => false
+
 end PointStatus
 
 structure VerifyReport where
@@ -76,16 +86,30 @@ structure VerifyReport where
   patched : Array (Array Int × Int) := #[]
   accepted : Bool := false
   reason : Option Reject := none
+  /-- Points whose value Lean computed from the emitted declaration and confirmed. -/
+  leanChecked : Nat := 0
+  /-- `some true` once Lean has elaborated the emitted declaration; `none` if it was never asked. -/
+  elaborated : Option Bool := none
 deriving Inhabited
 
 namespace VerifyReport
 
 def trace (r : VerifyReport) : String := String.join (r.statuses.toList.map PointStatus.symbol)
 
-/-- Base-case values in index order, ready for `renderDef`. -/
-def bases (r : VerifyReport) : Array String := r.patched.map fun (_, v) => toString v
-
 end VerifyReport
+
+/-- What evaluating one point produced. -/
+inductive Outcome where
+  /-- The computed value, printed the way `toString` prints an `Int`. -/
+  | value (s : String)
+  /-- It depended on a value no table knows. -/
+  | unknown
+  | timeout
+  /-- Could not be evaluated; repairable by a base case at a patchable position. -/
+  | error (r : Reject)
+  /-- Rejects the reading outright, wherever it happens. -/
+  | fatal (r : Reject)
+deriving Inhabited
 
 /-- Smallest index the text claims the formula holds from, if it says so. -/
 def guardLowerBound (guards : Array Guard) (param : String) : Option Int :=
@@ -101,12 +125,6 @@ def guardLowerBound (guards : Array Guard) (param : String) : Option Int :=
       | none, b => b
       | a, none => a
 
-/-- Everything the interpreter needs, assembled from a typing. -/
-def evalCtxOf (t : Typing) (tables : Array (String × Array (Array Int × Int)) := #[]) : EvalCtx :=
-  { self := { params := t.params, body := t.expr }
-    aux := t.aux.map fun (n, ps, b) => (n, { params := ps, body := b })
-    tables }
-
 /-- What to do about one data point. -/
 private inductive Decision where
   | pass
@@ -115,18 +133,18 @@ private inductive Decision where
   | timeoutRest
   | reject (r : Reject)
 
-/-- Run the interpreter over the points, repairing a leading prefix where that is allowed. -/
-def verifyInternal (cfg : VerifyConfig) (ctx : EvalCtx) (points : Array (Array Int × Int))
-    (lowerBound : Option Int := none) : VerifyReport := Id.run do
+/-- The verification policy, shared by every engine. `eval overrides args` evaluates the candidate
+at `args` with the given points already supplied as base cases. -/
+def runPolicy [Monad m] (cfg : VerifyConfig) (points : Array (Array Int × Int))
+    (lowerBound : Option Int) (eval : Array (Array Int × Int) → Array Int → m Outcome) :
+    m VerifyReport := do
   if points.isEmpty then return { accepted := false, reason := some (.belowSuccessRate 0 0) }
   let mut overrides : Array (Array Int × Int) := #[]
-  let mut memo : Std.HashMap String Val := {}
   let mut statuses : Array PointStatus := #[]
   let mut passed := 0
   let mut i := 0
   for (args, expected) in points do
-    let (r, memo') := evalAt { ctx with overrides } args cfg.budgetPerPoint memo
-    memo := memo'
+    let r ← eval overrides args
     -- A recursive body cannot produce its own base cases, so *any* outcome at a patchable
     -- position — mismatch, divergence, or an out-of-domain value — is repaired the same way.
     let patchable :=
@@ -137,21 +155,20 @@ def verifyInternal (cfg : VerifyConfig) (ctx : EvalCtx) (points : Array (Array I
             | _, _ => false))
     let decision : Decision :=
       match r with
-      | .ok v =>
-        if v.eqInt expected then .pass
+      | .value v =>
+        if v == toString expected then .pass
         else if patchable then .patch
-        else .reject (.failedAt i (toString expected) v.render)
+        else .reject (.failedAt i (toString expected) v)
       | .unknown => .unknown
-      | .error .budget => if patchable then .patch else .timeoutRest
-      | .error e => if patchable then .patch else .reject (.unsupported e.describe)
+      | .timeout => if patchable then .patch else .timeoutRest
+      | .error rj => if patchable then .patch else .reject rj
+      | .fatal rj => .reject rj
     match decision with
     | .pass =>
       statuses := statuses.push .pass
       passed := passed + 1
     | .patch =>
       overrides := overrides.push (args, expected)
-      -- Everything downstream of a patched value has to be recomputed.
-      memo := {}
       statuses := statuses.push .patched
       passed := passed + 1
     | .unknown => statuses := statuses.push .unknown
@@ -159,8 +176,9 @@ def verifyInternal (cfg : VerifyConfig) (ctx : EvalCtx) (points : Array (Array I
       statuses := statuses ++ Array.replicate (points.size - statuses.size) PointStatus.timeout
       break
     | .reject rj =>
-      return { statuses := statuses.push (.fail (toString expected)), passed
-               patched := overrides, accepted := false, reason := some rj }
+      let got := match rj with | .failedAt _ _ g => g | _ => "?"
+      return { statuses := statuses.push (.fail got), passed, patched := overrides
+               accepted := false, reason := some rj }
     i := i + 1
   let rate := passed.toFloat / points.size.toFloat
   if rate < cfg.minSuccessRate then
@@ -168,7 +186,32 @@ def verifyInternal (cfg : VerifyConfig) (ctx : EvalCtx) (points : Array (Array I
              reason := some (.belowSuccessRate passed points.size) }
   return { statuses, passed, patched := overrides, accepted := true }
 
-/-- Check one typing against known values. -/
+/-- Everything the interpreter needs, assembled from a typing. -/
+def evalCtxOf (t : Typing) (tables : Array (String × Array (Array Int × Int)) := #[]) : EvalCtx :=
+  { self := { params := t.params, body := t.expr }
+    aux := t.aux.map fun (n, ps, b) => (n, { params := ps, body := b })
+    tables }
+
+/-- The interpreter as a point evaluator. Its memo table is only valid for one set of base
+cases, so it is dropped whenever another one is added. -/
+private def internalEval (budget : Nat) (ctx : EvalCtx) (overrides : Array (Array Int × Int))
+    (args : Array Int) : StateM (Nat × Std.HashMap String Val) Outcome := do
+  let (seen, memo) ← get
+  let memo := if seen == overrides.size then memo else {}
+  let (r, memo') := evalAt { ctx with overrides } args budget memo
+  set (overrides.size, memo')
+  return match r with
+    | .ok v => .value v.render
+    | .unknown => .unknown
+    | .error .budget => .timeout
+    | .error e => .error (.unsupported e.describe)
+
+/-- Run the interpreter over the points, repairing a leading prefix where that is allowed. -/
+def verifyInternal (cfg : VerifyConfig) (ctx : EvalCtx) (points : Array (Array Int × Int))
+    (lowerBound : Option Int := none) : VerifyReport :=
+  (runPolicy cfg points lowerBound (internalEval cfg.budgetPerPoint ctx)).run' (0, {})
+
+/-- Check one typing against known values with the interpreter. -/
 def verify (cfg : VerifyConfig) (t : Typing) (points : Array (Array Int × Int))
     (guards : Array Guard := #[]) (tables : Array (String × Array (Array Int × Int)) := #[]) :
     VerifyReport :=

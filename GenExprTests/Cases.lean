@@ -26,18 +26,28 @@ structure Case where
   names : Array String := #["a"]
   types : Array FnTy := #[N]
   values : List Int := []
+  /-- Index of the first value. -/
+  start : Nat := 0
   allowed : Nat := 0
-  custom : Array String := #[]
+  custom : Array Alt := #[]
+  removeBuiltins : Array String := #[]
+  tables : Array (String × Array (Array Int × Int)) := #[]
   expect : Option String
   expectDecl : Option String := none
+  /-- Some rejection reason must contain this. -/
+  expectReason : Option String := none
+  /-- Only meaningful when values are checked by Lean. -/
+  leanOnly : Bool := false
 
-private def customAlt (f : String) : Alt :=
-  { key := f, template := f ++ " {0}", params := #[.nat], result := .nat, prec := 1023,
-    argPrec := #[1024] }
+private def table1 (rows : List (Int × Int)) : Array (Array Int × Int) :=
+  rows.toArray.map fun (a, v) => (#[a], v)
 
-private def custom2 (f : String) : Alt :=
-  { key := f, template := f ++ " {0} {1}", params := #[.nat, .nat], result := .nat, prec := 1023,
-    argPrec := #[1024, 1024] }
+/-- A catalogue entry whose Lean rendering deliberately means something else than its key: the
+interpreter evaluates `sqrt`, the emitted code computes `Nat.log 2`. Only an engine that runs the
+emitted code can notice. -/
+private def driftingSqrt : Alt :=
+  { key := "sqrt", template := "Nat.log 2 {0}", params := #[.nat], result := .nat, prec := 1023
+    argPrec := #[1024], imports := #["Mathlib.Data.Nat.Log"] }
 
 def corpus : Array Case := #[
   { name := "01 generating function in prose"
@@ -48,7 +58,8 @@ def corpus : Array Case := #[
     input := "a(n) = 0^n + n", values := [1, 1, 2, 3, 4, 5]
     expect := some "0 ^ n + n" },
   { name := "03 nested sums"
-    input := "a(n)=sum_(k=0)^n sum_(i=0)^n T(k,i)", custom := #["T2"]
+    input := "a(n)=sum_(k=0)^n sum_(i=0)^n T(k,i)"
+    tables := #[("T", #[(#[0, 0], 1), (#[1, 0], 1), (#[1, 1], 1)])]
     expect := some "∑ k ∈ Finset.range (n + 1), ∑ i ∈ Finset.range (n + 1), T k i" },
   { name := "04 unbounded sum"
     input := "g = sum{k>=1} 1/k^2", names := #["g"], types := #[R]
@@ -81,7 +92,8 @@ def corpus : Array Case := #[
     input := "res = sin(2*pi)*e", names := #["res"], types := #[R]
     expect := some "Real.sin (2 * Real.pi) * Real.exp 1" },
   { name := "13a power written before the arguments"
-    input := "A(x) = 1 + T(x) - T^2(x)/2 + T(x^2)/2", names := #["A"], custom := #["T"]
+    input := "A(x) = 1 + T(x) - T^2(x)/2 + T(x^2)/2", names := #["A"]
+    tables := #[("T", table1 [(0, 0), (1, 1), (2, 1)])]
     -- `T^2(x)` is `(T x)^2`; over ℕ the subtraction is moved past the additions.
     expect := some "1 + T x + T (x ^ 2) / 2 - T x ^ 2 / 2" },
   { name := "13b the same line without T is unparsable"
@@ -112,21 +124,57 @@ def corpus : Array Case := #[
     input := "a(n) = (n+1)(n+2)", values := [2, 6, 12, 20]
     expect := some "(n + 1) * (n + 2)" },
   { name := "20d two names never multiply"
-    input := "a(n) = n b", expect := some "n" }
+    input := "a(n) = n b", expect := some "n" },
+  { name := "21 recursion whose data starts at 1"
+    input := "a(n) = a(n-1)+n^2 for n > 1", values := [1, 5, 14, 30, 55], start := 1
+    expect := some "«self» (n - 1) + n ^ 2"
+    -- The base case is keyed by its argument; index 0 is outside the data and gets a junk arm.
+    expectDecl := some "def a : ℕ → ℕ\n  | 0 => 0\n  | 1 => 1\n  | n + 2 => a (n + 1) + (n + 2) ^ 2" },
+  { name := "22 Fibonacci, two base cases"
+    input := "a(n) = a(n-1)+a(n-2)", values := [0, 1, 1, 2, 3, 5, 8, 13, 21], allowed := 2
+    expect := some "«self» (n - 1) + «self» (n - 2)"
+    expectDecl := some "def a : ℕ → ℕ\n  | 0 => 0\n  | 1 => 1\n  | n + 2 => a (n + 1) + a n" },
+  { name := "23 data-only function"
+    input := "a(n) = F(n)+1", values := [1, 2, 3, 5]
+    tables := #[("F", table1 [(0, 0), (1, 1), (2, 2), (3, 4)])]
+    expect := some "F n + 1" },
+  { name := "24 emitted code that drifts from the interpreter is caught"
+    input := "a(n) = sqrt(n)", values := [0, 1, 1, 1, 2, 2, 2, 2, 2, 3]
+    removeBuiltins := #["sqrt"], custom := #[driftingSqrt]
+    expect := none, expectReason := some "point 1", leanOnly := true },
+  { name := "25 a slow evaluation times out without failing the formula"
+    -- Exponential in Lean, which does not memoise: late points time out, which lowers the
+    -- success rate but is not evidence against the formula.
+    input := "a(n) = a(n-1)+a(n-2)", allowed := 2
+    values := [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181,
+      6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269,
+      2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169, 63245986]
+    expect := some "«self» (n - 1) + «self» (n - 2)" }
 ]
 
-def runCase (c : Case) : Result := Id.run do
-  let custom := c.custom.map fun f =>
-    if f.endsWith "2" then custom2 ((f.dropEnd 1).toString) else customAlt f
-  let req : Request :=
-    { input := c.input, names := c.names, types := c.types, custom
-      values := c.values.toArray.mapIdx fun i v => (#[(i : Int)], v)
-      verify := { engine := .internal, allowedFailures := c.allowed } }
-  let r := analyze req
+def request (c : Case) (engine : Engine) : Request :=
+  { input := c.input, names := c.names, types := c.types, custom := c.custom
+    removeBuiltins := c.removeBuiltins, tables := c.tables
+    values := c.values.toArray.mapIdx fun i v => (#[((i + c.start : Nat) : Int)], v)
+    verify := { engine, allowedFailures := c.allowed } }
+
+def judge (c : Case) (r : GenExpr.Result) : GenExprTests.Result := Id.run do
   let got := (r.items[0]?.map (·.body))
   let mut out := check c.name c.expect got
   if let some d := c.expectDecl then
     out := out ++ check (c.name ++ " (decl)") (some d) (r.items[0]?.map (·.decl))
+  if let some needle := c.expectReason then
+    let reasons := r.rejected.toList.map fun (_, rj) => rj.describe
+    out := out ++ checkTrue (c.name ++ " (reason)")
+      (reasons.any fun s => (s.splitOn needle).length > 1)
+      s!"no reason mentions '{needle}': {reasons}"
   return out
+
+/-- Run one case with the interpreter only. -/
+def runCase (c : Case) : GenExprTests.Result := judge c (analyze (request c .internal))
+
+/-- Run one case with the given engine, Lean included. -/
+def runCaseWith (s : LeanEngine.Session) (engine : Engine) (c : Case) : IO GenExprTests.Result :=
+  return judge c (← run s (request c engine))
 
 end GenExprTests.Cases

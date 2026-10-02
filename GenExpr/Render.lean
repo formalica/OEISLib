@@ -103,14 +103,21 @@ partial def usesSelf : TExpr → Bool
   | .node a args => a.template.startsWith selfToken || args.any usesSelf
   | e => (TExpr.children e).any usesSelf
 
-partial def usesBigOperator : TExpr → Bool
-  | .agg kind _ _ _ _ _ _ _ _ => kind != .integral
-  | e => (TExpr.children e).any usesBigOperator
+private def dedupStrings (xs : Array String) : Array String :=
+  (xs.foldl (fun acc s => if acc.contains s then acc else acc.push s) #[]).qsort (· < ·)
 
-/-- Modules the term needs, beyond whatever the caller already imports. -/
+/-- Modules a term needs: those of its alternatives, of every type it mentions, and of the way
+its aggregators are lowered. -/
+def exprImports (e : TExpr) : Array String :=
+  e.imports ++ (e.types.map Builtins.typeImports).flatten ++
+    (e.aggregators.map fun (k, bounded, dv) => Builtins.aggImports k bounded dv).flatten
+
+/-- Modules the declaration needs, sorted and without duplicates. -/
 def typingImports (t : Typing) : Array String :=
-  let base := t.expr.imports
-  if usesBigOperator t.expr then base.push "Mathlib.Algebra.BigOperators.Basic" else base
+  dedupStrings <|
+    exprImports t.expr ++ (t.aux.map fun (_, ps, b) =>
+      exprImports b ++ (ps.map fun (_, ty) => Builtins.typeImports ty).flatten).flatten ++
+    (t.params.map fun (_, ty) => Builtins.typeImports ty).flatten ++ Builtins.typeImports t.ret
 
 /-- The body alone, with `«self»` where the definition recurses. Stored as-is, so the same body
 can later be re-rendered under a different name. -/
@@ -127,25 +134,41 @@ def renderAux (st : RenderStyle) (name : String) (params : Array (String × Ty))
   let kw := if body.computable then "def" else "noncomputable def"
   s!"{kw} {name}{bs} : {body.ty.render} :=\n  {render st 0 body}"
 
-/-- A complete `def`. `bases` supplies the values of the first indices, which recursion and
-patched base cases both need. -/
-def renderDef (st : RenderStyle) (t : Typing) (name : String) (bases : Array String := #[]) :
-    String :=
+/-- A complete `def`. `patched` lists values supplied as base cases, keyed by their actual
+arguments, so that data starting at index 1 is not mis-rendered as starting at 0. -/
+def renderDef (st : RenderStyle) (t : Typing) (name : String)
+    (patched : Array (Array Int × Int) := #[]) : String :=
   let body := (renderBody st t).replace selfToken name
   let sig := s!"{name}{binders t} : {t.ret.render}"
   let kw := if t.computable then "def" else "noncomputable def"
-  if bases.isEmpty then
+  let ty := String.intercalate " → " (t.params.toList.map (·.2.render) ++ [t.ret.render])
+  let natArg := t.params.size == 1 && t.params[0]!.2 == .nat
+  let v := (t.params[0]?.map (·.1)).getD "n"
+  let lit (x : Int) : String := if x < 0 then s!"({x})" else toString x
+  if patched.isEmpty then
     if usesSelf t.expr then
       s!"{kw} {sig} :=\n  {body}\ndecreasing_by all_goals simp_wf; omega"
     else s!"{kw} {sig} :=\n  {body}"
-  else
-    -- Structural form: the listed values, then the general case shifted past them.
-    let v := (t.params[0]?.map (·.1)).getD "n"
-    let b := bases.size
+  else if natArg && usesSelf t.expr then
+    -- Structural form: every index below the general case gets an arm, so the recursive call
+    -- always lands on a smaller one. Indices outside the data get a junk value.
+    let b := patched.foldl (fun m (a, _) => max m ((a[0]?.getD 0).toNat + 1)) 0
+    let valueAt (i : Nat) : String :=
+      match patched.find? fun (a, _) => a[0]? == some (i : Int) with
+      | some (_, x) => lit x
+      | none => "0"
+    let arms := (List.range b).map fun i => s!"  | {i} => {valueAt i}"
     let shifted := simplifyOffsets v (substVar v (natPlus b (.var v .nat)) t.expr)
-    let arms := bases.toList.mapIdx fun i s => s!"  | {i} => {s}"
     let general := s!"  | {v} + {b} => " ++ (render st 0 shifted).replace selfToken name
-    let ty := String.intercalate " → " (t.params.toList.map (·.2.render) ++ [t.ret.render])
     s!"{kw} {name} : {ty}\n" ++ String.intercalate "\n" (arms ++ [general])
+  else if natArg then
+    let arms := patched.toList.map fun (a, x) => s!"  | {a[0]!} => {lit x}"
+    s!"{kw} {name} : {ty}\n" ++ String.intercalate "\n" (arms ++ [s!"  | {v} => {body}"])
+  else
+    let names := t.params.map (·.1)
+    let cond (a : Array Int) : String :=
+      String.intercalate " ∧ " ((Array.zip names a).toList.map fun (n, x) => s!"{n} = {lit x}")
+    let chain := patched.foldr (fun (a, x) acc => s!"if {cond a} then {lit x} else {acc}") body
+    s!"{kw} {sig} :=\n  {chain}"
 
 end GenExpr

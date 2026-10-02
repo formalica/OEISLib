@@ -1,12 +1,13 @@
-import GenExpr.Verify
-import GenExpr.Render
+import GenExpr.LeanEngine
 
 /-!
 The public entry point.
 
 `analyze` runs the whole pipeline — scan, segment, plan, type, render, check against values — and
-is pure, so it can be called from tests without a Lean environment. Callers supply their own
-catalogue additions, the signatures they want, and whatever values they know.
+is pure: it checks values with the interpreter and needs no Lean environment. `run` is the same
+pipeline in `IO`, checking with whichever engine `Request.verify.engine` names, Lean included.
+Both are `analyzeWith` over a different `Checker`, so they cannot diverge on anything but how a
+reading is checked.
 
 Nothing here mentions OEIS. A caller that has sequences supplies them as `custom` alternatives or
 as `tables` of known points.
@@ -38,7 +39,8 @@ structure Request where
   style : RenderStyle := {}
 deriving Inhabited
 
-/-- One accepted formalization. -/
+/-- One formalization. `report.accepted` says whether it was verified against the values;
+a non-computable reading is returned unverified, flagged by `computable := false`. -/
 structure Item where
   name : String
   ty : FnTy
@@ -66,6 +68,12 @@ structure Result where
   rejected : Array (Span × Reject) := #[]
 deriving Inhabited
 
+/-- How readings are checked. `check` runs against the values; `typecheck` only elaborates and
+answers `none` when the reading is fine or when no type checker is available. -/
+structure Checker (m : Type → Type) where
+  check : Goal → Typing → m VerifyReport
+  typecheck : Typing → m (Option Reject)
+
 /-- A function known only by its values still needs a catalogue entry so that the parser treats
 it as a call and the typer knows its shape. -/
 private def tableAlt (name : String) (tbl : Array (Array Int × Int)) : Alt :=
@@ -84,8 +92,8 @@ private def spanText (inp : Input) (sp : Span) : String :=
 private def joinSpans (inp : Input) (spans : Array Span) : String :=
   String.intercalate " … " (spans.toList.map (spanText inp))
 
-/-- Run the whole pipeline. Pure: no Lean environment is needed. -/
-def analyze (req : Request) : Result := Id.run do
+/-- The pipeline, parameterised by how readings are checked. -/
+def analyzeWith [Monad m] (chk : Checker m) (req : Request) : m Result := do
   let reg :=
     (Builtins.standard.merge (req.custom ++ req.tables.map fun (n, t) => tableAlt n t)
       req.removeBuiltins)
@@ -107,22 +115,30 @@ def analyze (req : Request) : Result := Id.run do
       if ts.isEmpty then
         rejected := rejected.push (g.main.span, .typeUnachievable want.ret)
         continue
-      -- With no values to check against there is nothing to choose between readings, so the
-      -- cheapest one stands; `Item.computable` tells the caller whether it could have been run.
-      let (best, tried) :=
-        if req.values.isEmpty then (ts.head?.map fun t => (t, ({} : VerifyReport)), #[])
-        else firstVerified req.verify ts req.values g.guards req.tables
-      match best with
-      | none =>
-        for (_, r) in tried do
+      let mut chosen : Option (Typing × VerifyReport) := none
+      if !req.values.isEmpty then
+        for t in ts.filter (·.computable) do
+          let r ← chk.check g t
+          if r.accepted then
+            chosen := some (t, r)
+            break
           if let some why := r.reason then rejected := rejected.push (g.main.span, why)
-      | some (t, rep) =>
-        let name := t.name
+      -- With nothing to check against — no values, or no reading that can be run — the
+      -- cheapest reading that type checks stands, unverified.
+      if chosen.isNone && (req.values.isEmpty || ts.all (!·.computable)) then
+        for t in ts do
+          match ← chk.typecheck t with
+          | some why => rejected := rejected.push (g.main.span, why)
+          | none =>
+            let reason := if req.values.isEmpty then none else some Reject.notComputable
+            chosen := some (t, { accepted := false, reason })
+            break
+      if let some (t, rep) := chosen then
         let spans := g.spans
         items := items.push
-          { name, ty := t.fnTy
+          { name := t.name, ty := t.fnTy
             body := renderBody req.style t
-            decl := renderDef req.style t name rep.bases
+            decl := renderDef req.style t t.name rep.patched
             aux := t.aux.map fun (n, ps, b) => renderAux req.style n ps b
             imports := typingImports t
             spans, text := joinSpans sc.input spans
@@ -130,5 +146,24 @@ def analyze (req : Request) : Result := Id.run do
             baseCases := rep.patched
             report := rep, cost := t.cost }
   return { items, rejected }
+
+/-- Run the whole pipeline, checking values with the interpreter. Pure. -/
+def analyze (req : Request) : Result :=
+  analyzeWith (m := Id)
+    { check := fun g t => verify req.verify t req.values g.guards req.tables
+      typecheck := fun _ => none }
+    req
+
+/-- Run the whole pipeline with the engine `req.verify.engine` names. The Lean engines need a
+session, which caches environments across requests. -/
+def run (session : LeanEngine.Session) (req : Request) : IO Result :=
+  if !req.verify.engine.usesLean then pure (analyze req)
+  else
+    analyzeWith
+      { check := fun g t => session.check req.verify t req.values g.guards req.tables
+        typecheck := fun t =>
+          if session.cfg.elabNoncomputable || t.computable then session.typecheck t req.tables
+          else pure none }
+      req
 
 end GenExpr

@@ -169,7 +169,9 @@ lake exe oeis-cache <prune|stat|put|get> [--archive PATH] [--manifest PATH] [--b
 
 # GenExprParser: the `#guard` suites fail the build, the exe covers the acceptance corpus.
 lake build GenExprTests
-lake exe genexpr-test [--filter SUBSTRING] [--list]
+lake exe genexpr-test [--engine internal|lean|internalThenLean|crossCheck] [--elab-noncomputable]
+                      [--timeout MS] [--filter SUBSTRING] [--list]
+lake exe genexpr-test --check-imports   # every declared import list, one child process per set
 
 uv venv && uv pip install -e .
 PYTHONPATH=Scripts .venv/bin/python -m formalize run   [--batch-size N] [--batches N] [--retry N] [--bucket A000] [--seq A000045] [--dry-run] [--learn] [--include-attempted] [--keep-check-files]
@@ -291,6 +293,26 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   interrupted once running, which is why `internal` is the default engine.
 - **A call to a data-only function outside its table is `unknown`, not a failure** — the point
   proves nothing rather than counting against the formula.
+- **One verification policy, two evaluators.** `runPolicy` (prefix patching, guards, success
+  rate) is generic over a point evaluator; the interpreter and `GenExpr.LeanEngine` only differ in
+  how one point is computed, so they cannot drift on what counts as verified.
+- **The Lean engine checks the declaration exactly as emitted** (`renderDef` output, base-case
+  arms included), elaborated with `Lean.Elab.process` in memory and run through a
+  `probe : Array Int → String` via `evalConst`. Data-only functions become stubs, elaborated twice
+  with different junk values in one snippet; differing results mean `unknown`.
+- **Base cases are keyed by their argument**, not by position — data starting at 1 used to be
+  rendered as an arm for 0, which the interpreter could not notice and Lean did.
+- **One shared environment, imported once.** `importModules` costs seconds for a targeted set,
+  7.5 min / 3.9 GB for all of Mathlib, and an environment is never freed. Default base set is
+  `Builtins.computableImports` (≈12 s cold, 2 GB); `--elab-noncomputable` switches to
+  `Builtins.allImports` (≈26 s, 2.8–4.1 GB). Several separate analysis environments OOM'd a 15 GB box.
+- **Import *sufficiency* is checked in child processes** (`LeanEngine.elabIsolated`,
+  `--check-imports`): one fresh environment per import set, memory released on exit.
+- **Non-computable readings are returned flagged** (`computable := false`, `report.accepted :=
+  false`), never silently dropped — but only when *no* computable reading exists, so a computable
+  formula that fails its data is not replaced by an unrunnable one.
+- **`internalThenLean` only evaluates in Lean the points the interpreter already settled**, so a
+  slow Lean evaluation can time out but never runs on a point that was never going to finish.
 
 ## Lean 4.34 gotchas (this toolchain)
 
@@ -316,6 +338,17 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   corpus at process start and blew the stack; give such definitions a `Unit` parameter or drop
   them. The interpreter (`#guard`, `lean --run`) does not show this, only the compiled binary.
 - `String.dropRight` is deprecated in favour of `String.dropEnd`, which returns a `Slice`.
+- **Runtime elaboration needs**: `supportInterpreter = true` on the `lean_exe`;
+  `enableInitializersExecution` before *every* `importModules (loadExts := true)` (each import
+  resets the flag); `evalConst … (checkMeta := false)`; `LEAN_PATH` from `lake exe` / `lake env`.
+- **An abandoned task keeps the process alive** after `main` returns. Anything that may time out
+  a Lean evaluation must end with `IO.Process.exit`.
+- `Options.setNat` is gone; use `maxHeartbeats.set opts n`. `List.allSome` does not exist; use
+  `Array.mapM id` in `Option`. `matches` is a keyword.
+- Mathlib module moves seen while fixing the catalogue: big operators are
+  `Mathlib.Algebra.BigOperators.Group.Finset.Defs`, `Real.logb` is `…SpecialFunctions.Log.Base`,
+  `Real.sqrt` is `Mathlib.Analysis.Real.Sqrt`, the `|x|` notation is
+  `Mathlib.Algebra.Order.Group.Unbundled.Abs`; `Nat.sqrt` is core.
 - `leansqlite` is built with `experimental.module`; `SQLite.open` must be written
   `SQLite.«open»`.
 - A `lean_exe` root outside any `lean_lib` glob will not get its imports built. The `Scripts`
@@ -349,20 +382,22 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 9. Build cost: `import Mathlib.Tactic` in every generated file makes a full 396k-sequence build
    impractical. Revisit if the A000 bucket build turns out too slow.
 10. Consider exporting the DB to Parquet/JSONL — HF's dataset viewer cannot read SQLite.
-11. **Finish GenExprParser.** The pipeline is complete and green end to end: raw text → Lean that
-    elaborates, evaluates and matches the data. `lake exe genexpr-test` runs 23 acceptance cases.
-    Remaining:
-    * *Lean verification backend* — `GenExpr.Verify` currently implements the `internal` engine
-      only; `lean`, `internalThenLean` and `crossCheck` need `importModules` + elaboration of a
-      probe declaration against a cached environment.
+11. **Finish GenExprParser.** The pipeline is complete and green end to end with all four
+    verification engines: raw text → Lean that elaborates, evaluates and matches the data.
+    `lake exe genexpr-test --engine crossCheck` runs 28 checks; `--check-imports` confirms all 107
+    declared import lists. Remaining:
     * *Recursion ladder* — only the structural `match` form is emitted; well-founded
       (`termination_by` / `decreasing_by`) and fuel forms are needed for `a(n) = a(n/2) + 1`.
     * *`Prop` goals* — `PlanResult.relations` already collects the candidates
       (`A046080(a(n)) = 1`); nothing turns them into theorems yet.
     * *OEISParser* — the OEIS-specific wrapper that feeds sequences in as custom alternatives and
-      writes results to `formalization_item`.
+      writes results to `formalization_item`. Should use `run` with `internalThenLean` and one
+      long-lived `LeanEngine.Session` per process.
+    * *`oeis-verify`* — can reuse `LeanEngine.Session.check` / `runPolicy` directly.
     * *Later* — LaTeX/Wolfram frontends (`GenExpr.Ast` is the extension point), `PowerSeries` /
       `EReal` (`Ty` has an `other` constructor reserved).
+12. `lake build` with no target builds `LOEIS` (792k modules) — it is in `defaultTargets`. Use
+    `lake build GenExpr GenExprTests genexpr-test` for parser work.
 
 ## Progress log
 
@@ -478,6 +513,21 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   out of the printer into `Infer` so the interpreter and the renderer share one term, and a
   parameterless `def` is a closed term that Lean evaluates at module initialization — which ran
   the whole test corpus before `main` started and overflowed the stack.
+- **2026-10-02** — GenExprParser Lean verification engines: new `GenExpr/LeanEngine.lean`;
+  `Verify` refactored so `runPolicy` is shared by both evaluators; `Api` split into a generic
+  `analyzeWith` used by pure `analyze` (interpreter) and IO `run` (any engine). `lean`,
+  `internalThenLean` and `crossCheck` all pass the 28-check corpus; a deliberately drifting
+  catalogue entry (`sqrt` keyed, `Nat.log` rendered) is accepted by the interpreter and rejected
+  by every Lean engine at point 1; a 40-term naive Fibonacci times out once in Lean and is still
+  accepted. The Lean engine found three real bugs the interpreter could not: two registry
+  modules that do not exist in this Mathlib (`BigOperators.Basic`, `SpecialFunctions.Logb`),
+  table stubs using `ℤ` without importing it, and base cases rendered by position so data
+  starting at 1 produced an arm for 0. `--check-imports` then verified all 107 declared import
+  lists in child processes and caught one more (`|x|` on `ℤ` lacked the notation module).
+  Measurements that shaped the design: importing all of Mathlib at run time takes 7.5 min /
+  3.9 GB, a targeted set 2–14 s; environments are never freed, and importing several analysis
+  sets in one process was OOM-killed at 5.8 GB, hence one shared environment per process and
+  child processes for import checks.
 
 ## RULE 0 reminder
 

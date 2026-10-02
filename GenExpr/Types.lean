@@ -184,6 +184,8 @@ inductive Reject where
   | nonTerminating
   /-- Well typed but not evaluable, so it cannot be checked against data. -/
   | notComputable
+  /-- The two verification engines computed different values for the same point. -/
+  | engineDisagreement (index : Nat) (internal lean : String)
   | unsupported (what : String)
 deriving DecidableEq, Repr, Inhabited
 
@@ -204,6 +206,7 @@ def describe : Reject → String
   | .indeterminate => "depends on values outside every known table"
   | .nonTerminating => "recursion does not terminate"
   | .notComputable => "not computable, cannot be checked against data"
+  | .engineDisagreement i a b => s!"engines disagree at point {i}: internal {a}, Lean {b}"
   | .unsupported w => s!"unsupported: {w}"
 
 instance : ToString Reject where

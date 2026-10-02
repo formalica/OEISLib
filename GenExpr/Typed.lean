@@ -52,6 +52,19 @@ private def dedup (xs : Array String) : Array String :=
 
 def imports (e : TExpr) : Array String := dedup ((e.alts.map (·.imports)).flatten)
 
+/-- Every type some node of the term has, cast sources included. -/
+partial def types (e : TExpr) : Array Ty :=
+  let here := match e with
+    | .cast s d _ => #[s, d]
+    | x => #[x.ty]
+  (children e).foldl (fun acc x => acc ++ types x) here
+
+/-- Each aggregator as `(kind, has an upper bound, ranges over divisors)`. -/
+partial def aggregators : TExpr → Array (AggKind × Bool × Bool)
+  | e@(.agg k _ _ hi dv _ _ _ _) =>
+    (children e).foldl (fun acc x => acc ++ aggregators x) #[(k, hi.isSome, dv.isSome)]
+  | e => (children e).foldl (fun acc x => acc ++ aggregators x) #[]
+
 def opens (e : TExpr) : Array String := dedup ((e.alts.map (·.opens)).flatten)
 
 /-- Whether the term can be evaluated, as opposed to merely elaborated. -/

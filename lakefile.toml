@@ -62,3 +62,5 @@ root = "Scripts.OeisCache"
 [[lean_exe]]
 name = "genexpr-test"
 root = "GenExprTests.Main"
+# The Lean verification engine elaborates and evaluates generated code at run time.
+supportInterpreter = true

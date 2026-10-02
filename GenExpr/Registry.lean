@@ -1,4 +1,4 @@
-import GenExpr.Types
+import GenExpr.Ast
 
 /-!
 The catalogue of Lean terms a surface name can stand for.
@@ -112,7 +112,7 @@ def arithmetic : Array Alt := Id.run do
     out := out.push
       { key := "^", template := "{0} ^ {1}", params := #[t, .int], result := t,
         transparent := true, computable := t.isComputable, bias := 1, prec := 75,
-        argPrec := #[76, 75] }
+        argPrec := #[76, 75], imports := #["Mathlib.Algebra.Field.Rat"] }
   out := out.push
     { key := "^", template := "{0} ^ {1}", params := #[.real, .real], result := .real,
       transparent := true, computable := false, bias := 2, prec := 75, argPrec := #[76, 75],
@@ -133,27 +133,27 @@ private def bracket (key template : String) (params : Array Ty) (result : Ty)
 
 def functions : Array Alt := #[
   fn "sqrt" "Nat.sqrt {0}" #[.nat] .nat,
-  fn "sqrt" "Int.sqrt {0}" #[.int] .int,
+  fn "sqrt" "Int.sqrt {0}" #[.int] .int (imports := #["Mathlib.Data.Int.Sqrt"]),
   fn "sqrt" "Real.sqrt {0}" #[.real] .real (computable := false)
-    (imports := #["Mathlib.Analysis.SpecialFunctions.Sqrt"]),
+    (imports := #["Mathlib.Analysis.Real.Sqrt"]),
 
   -- `|n-1|` at `ℕ` goes through `Int.natAbs`, which is why an opaque result may sit below its
   -- context type.
   bracket "abs" "{0}" #[.nat] .nat,
   bracket "abs" "({0}).natAbs" #[.int] .nat,
-  bracket "abs" "|{0}|" #[.int] .int (bias := 1),
-  bracket "abs" "|{0}|" #[.real] .real (computable := false) (bias := 1),
+  bracket "abs" "|{0}|" #[.int] .int (bias := 1)
+    (imports := #["Mathlib.Algebra.Order.Group.Int", "Mathlib.Algebra.Order.Group.Unbundled.Abs"]),
+  bracket "abs" "|{0}|" #[.real] .real (computable := false) (bias := 1)
+    (imports := #["Mathlib.Algebra.Order.Group.Unbundled.Abs"]),
 
   bracket "floor" "{0}" #[.nat] .nat,
   bracket "floor" "{0}" #[.int] .int,
-  bracket "floor" "⌊{0}⌋₊" #[.rat] .nat (imports := #["Mathlib.Algebra.Order.Floor.Defs"]),
-  bracket "floor" "⌊{0}⌋" #[.rat] .int (imports := #["Mathlib.Algebra.Order.Floor.Defs"])
-    (bias := 1),
+  bracket "floor" "⌊{0}⌋₊" #[.rat] .nat (imports := #["Mathlib.Data.Rat.Floor"]),
+  bracket "floor" "⌊{0}⌋" #[.rat] .int (imports := #["Mathlib.Data.Rat.Floor"]) (bias := 1),
   bracket "floor" "⌊{0}⌋₊" #[.real] .nat (computable := false)
-    (imports := #["Mathlib.Algebra.Order.Floor.Defs"]),
-  bracket "ceiling" "⌈{0}⌉₊" #[.rat] .nat (imports := #["Mathlib.Algebra.Order.Floor.Defs"]),
-  bracket "ceiling" "⌈{0}⌉" #[.rat] .int (imports := #["Mathlib.Algebra.Order.Floor.Defs"])
-    (bias := 1),
+    (imports := #["Mathlib.Algebra.Order.Archimedean.Real.Basic"]),
+  bracket "ceiling" "⌈{0}⌉₊" #[.rat] .nat (imports := #["Mathlib.Data.Rat.Floor"]),
+  bracket "ceiling" "⌈{0}⌉" #[.rat] .int (imports := #["Mathlib.Data.Rat.Floor"]) (bias := 1),
 
   fn "!" "Nat.factorial {0}" #[.nat] .nat (imports := #["Mathlib.Data.Nat.Factorial.Basic"]),
   fn "!!" "Nat.doubleFactorial {0}" #[.nat] .nat
@@ -172,7 +172,7 @@ def functions : Array Alt := #[
   -- A subscript is the first argument, so `log_2(n)` and `log(2, n)` reach the same rows.
   fn "log" "Nat.log {0} {1}" #[.nat, .nat] .nat (imports := #["Mathlib.Data.Nat.Log"]),
   fn "log" "Real.logb {0} {1}" #[.real, .real] .real (computable := false)
-    (imports := #["Mathlib.Analysis.SpecialFunctions.Logb"]),
+    (imports := #["Mathlib.Analysis.SpecialFunctions.Log.Base"]),
   fn "log" "Real.log {0}" #[.real] .real (computable := false)
     (imports := #["Mathlib.Analysis.SpecialFunctions.Log.Basic"]),
   fn "ln" "Real.log {0}" #[.real] .real (computable := false)
@@ -187,8 +187,8 @@ def functions : Array Alt := #[
     (imports := #["Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic"]),
 
   fn "fibonacci" "Nat.fib {0}" #[.nat] .nat (imports := #["Mathlib.Data.Nat.Fib.Basic"]),
-  fn "phi" "Nat.totient {0}" #[.nat] .nat (imports := #["Mathlib.NumberTheory.Divisors"]),
-  fn "totient" "Nat.totient {0}" #[.nat] .nat (imports := #["Mathlib.NumberTheory.Divisors"]),
+  fn "phi" "Nat.totient {0}" #[.nat] .nat (imports := #["Mathlib.Data.Nat.Totient"]),
+  fn "totient" "Nat.totient {0}" #[.nat] .nat (imports := #["Mathlib.Data.Nat.Totient"]),
 
   -- Arity tells `pi` the constant from `pi(x)` the prime-counting function.
   fn "pi" "Real.pi" #[] .real (computable := false)
@@ -198,21 +198,57 @@ def functions : Array Alt := #[
   fn "e" "Real.exp 1" #[] .real (computable := false)
     (imports := #["Mathlib.Analysis.SpecialFunctions.Exp"]),
   fn "i" "Complex.I" #[] .complex (computable := false)
-    (imports := #["Mathlib.Analysis.SpecialFunctions.Complex.Circle"])
+    (imports := #["Mathlib.Data.Complex.Basic"])
 ]
 
 /-- Applied at the root only, when nothing produces the requested type directly. -/
 def narrowings : Array Alt := #[
   bracket "narrow" "({0}).toNat" #[.int] .nat,
-  bracket "narrow" "⌊{0}⌋₊" #[.rat] .nat (imports := #["Mathlib.Algebra.Order.Floor.Defs"]),
-  bracket "narrow" "⌊{0}⌋" #[.rat] .int (imports := #["Mathlib.Algebra.Order.Floor.Defs"]),
+  bracket "narrow" "⌊{0}⌋₊" #[.rat] .nat (imports := #["Mathlib.Data.Rat.Floor"]),
+  bracket "narrow" "⌊{0}⌋" #[.rat] .int (imports := #["Mathlib.Data.Rat.Floor"]),
   bracket "narrow" "⌊{0}⌋₊" #[.real] .nat (computable := false)
-    (imports := #["Mathlib.Algebra.Order.Floor.Defs"]),
+    (imports := #["Mathlib.Algebra.Order.Archimedean.Real.Basic"]),
   bracket "narrow" "⌊{0}⌋" #[.real] .int (computable := false)
-    (imports := #["Mathlib.Algebra.Order.Floor.Defs"])
+    (imports := #["Mathlib.Algebra.Order.Archimedean.Real.Basic"])
 ]
 
 def standard : Registry := { alts := arithmetic ++ functions }
+
+/-- Modules providing the notation (`ℕ`, `ℚ`, …) and arithmetic instances a type needs. -/
+def typeImports : Ty → Array String
+  | .nat => #["Mathlib.Data.Nat.Notation"]
+  | .int => #["Mathlib.Data.Int.Notation"]
+  | .rat => #["Mathlib.Data.Rat.Init"]
+  | .real => #["Mathlib.Data.Real.Basic"]
+  | .complex => #["Mathlib.Data.Complex.Basic"]
+  | _ => #[]
+
+/-- Modules the lowering of an aggregator needs, by kind and by whether it is bounded. -/
+def aggImports (kind : AggKind) (bounded divisors : Bool) : Array String :=
+  match kind with
+  | .integral => #["Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic"]
+  | _ =>
+    if divisors then #["Mathlib.Algebra.BigOperators.Group.Finset.Defs", "Mathlib.NumberTheory.Divisors"]
+    else if bounded then
+      #["Mathlib.Algebra.BigOperators.Group.Finset.Defs", "Mathlib.Order.Interval.Finset.Nat"]
+    else #["Mathlib.Topology.Algebra.InfiniteSum.Defs", "Mathlib.Topology.Instances.Real.Lemmas"]
+
+/-- Every import a computable reading of the standard catalogue can need. Importing these once
+lets a single environment serve every candidate that can be evaluated. -/
+def computableImports : Array String :=
+  let alts := (standard.alts ++ narrowings).filter (·.computable)
+  let all := (alts.map (·.imports)).flatten ++ typeImports .nat ++ typeImports .int ++
+    typeImports .rat ++ aggImports .sum true false ++ aggImports .sum true true
+  (all.foldl (fun acc s => if acc.contains s then acc else acc.push s) #[]).qsort (· < ·)
+
+/-- Every import any reading of the standard catalogue can need, including the analysis behind
+`∑'`, `∫` and the real functions. Much heavier than `computableImports`. -/
+def allImports : Array String :=
+  let all := ((standard.alts ++ narrowings).map (·.imports)).flatten ++
+    ([Ty.nat, .int, .rat, .real, .complex].map typeImports).toArray.flatten ++
+    aggImports .sum true false ++ aggImports .sum true true ++ aggImports .sum false false ++
+    aggImports .integral true false
+  (all.foldl (fun acc s => if acc.contains s then acc else acc.push s) #[]).qsort (· < ·)
 
 end Builtins
 
