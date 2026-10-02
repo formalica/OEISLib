@@ -68,11 +68,12 @@ structure Result where
   rejected : Array (Span × Reject) := #[]
 deriving Inhabited
 
-/-- How readings are checked. `check` runs against the values; `typecheck` only elaborates and
-answers `none` when the reading is fine or when no type checker is available. -/
+/-- How readings are checked. `check` runs a reading against points; `typecheck` only
+elaborates, answering with the recursion rung that elaborated, or `none` when no type checker
+is available. -/
 structure Checker (m : Type → Type) where
-  check : Goal → Typing → m VerifyReport
-  typecheck : Typing → m (Option Reject)
+  check : VerifyConfig → Typing → Array (Array Int × Int) → Array Guard → m VerifyReport
+  typecheck : Typing → m (Except Reject (Option RecForm))
 
 /-- A function known only by its values still needs a catalogue entry so that the parser treats
 it as a call and the typer knows its shape. -/
@@ -92,6 +93,39 @@ private def spanText (inp : Input) (sp : Span) : String :=
 private def joinSpans (inp : Input) (spans : Array Span) : String :=
   String.intercalate " … " (spans.toList.map (spanText inp))
 
+/-- Try the readings of one goal: the first computable one that verifies, or — with nothing to
+check against, or nothing that can be run — the cheapest one that type checks, unverified. -/
+private def choose [Monad m] (chk : Checker m) (cfg : VerifyConfig) (ts : List Typing)
+    (points : Array (Array Int × Int)) (guards : Array Guard) (span : Span) :
+    m (Option (Typing × VerifyReport) × Array (Span × Reject)) := do
+  let mut rejected : Array (Span × Reject) := #[]
+  if !points.isEmpty then
+    for t in ts.filter (·.computable) do
+      let r ← chk.check cfg t points guards
+      if r.accepted then return (some (t, r), rejected)
+      if let some why := r.reason then rejected := rejected.push (span, why)
+  if points.isEmpty || ts.all (!·.computable) then
+    for t in ts do
+      match ← chk.typecheck t with
+      | .error why => rejected := rejected.push (span, why)
+      | .ok form =>
+        let reason := if points.isEmpty then none else some Reject.notComputable
+        return (some (t, { accepted := false, reason, recForm := form }), rejected)
+  return (none, rejected)
+
+private def mkItem (st : RenderStyle) (inp : Input) (t : Typing) (rep : VerifyReport)
+    (spans : Array Span) : Item :=
+  let isProp := t.ret == .prop
+  { name := t.name, ty := t.fnTy
+    body := if isProp then renderStatement st t else renderBody st t
+    decl := renderDef st t t.name rep.patched (rep.recForm.getD (recFormOf t))
+    aux := t.aux.map fun (n, ps, b) => renderAux st n ps b
+    imports := typingImports t
+    spans, text := joinSpans inp spans
+    computable := t.computable
+    baseCases := rep.patched
+    report := rep, cost := t.cost }
+
 /-- The pipeline, parameterised by how readings are checked. -/
 def analyzeWith [Monad m] (chk : Checker m) (req : Request) : m Result := do
   let reg :=
@@ -105,6 +139,26 @@ def analyzeWith [Monad m] (chk : Checker m) (req : Request) : m Result := do
   for want in req.types do
     if !items.isEmpty && !req.allResults then break
     let arity := want.arity
+    if want.ret == .prop then
+      -- Each statement in the input is checked on its own and returned on its own.
+      let (groups, rej) := planProps sc arity reg.names.contains
+      rejected := rejected ++ rej
+      -- A statement holds or not at each point: expected `1`, and nothing to patch.
+      let points := req.values.map fun (args, _) => (args, (1 : Int))
+      let cfg := { req.verify with allowedFailures := 0 }
+      for group in groups do
+        let ts := group.toList.flatMap fun g => typeProp reg req.beam g want
+        let ts := (ts.toArray.qsort fun a b => a.cost < b.cost).toList
+        let span := group[0]!.span
+        if ts.isEmpty then
+          rejected := rejected.push (span, .typeUnachievable .prop)
+          continue
+        let (chosen, rej) ← choose chk cfg ts points #[] span
+        rejected := rejected ++ rej
+        if let some (t, rep) := chosen then
+          let g := (group.find? fun g => g.vars.size == t.params.size).getD group[0]!
+          items := items.push (mkItem req.style sc.input t rep g.spans)
+      continue
     let p := plan sc { names := req.names, arity }
     if !plannedArities.contains arity then
       plannedArities := plannedArities.push arity
@@ -115,43 +169,17 @@ def analyzeWith [Monad m] (chk : Checker m) (req : Request) : m Result := do
       if ts.isEmpty then
         rejected := rejected.push (g.main.span, .typeUnachievable want.ret)
         continue
-      let mut chosen : Option (Typing × VerifyReport) := none
-      if !req.values.isEmpty then
-        for t in ts.filter (·.computable) do
-          let r ← chk.check g t
-          if r.accepted then
-            chosen := some (t, r)
-            break
-          if let some why := r.reason then rejected := rejected.push (g.main.span, why)
-      -- With nothing to check against — no values, or no reading that can be run — the
-      -- cheapest reading that type checks stands, unverified.
-      if chosen.isNone && (req.values.isEmpty || ts.all (!·.computable)) then
-        for t in ts do
-          match ← chk.typecheck t with
-          | some why => rejected := rejected.push (g.main.span, why)
-          | none =>
-            let reason := if req.values.isEmpty then none else some Reject.notComputable
-            chosen := some (t, { accepted := false, reason })
-            break
+      let (chosen, rej) ← choose chk req.verify ts req.values g.guards g.main.span
+      rejected := rejected ++ rej
       if let some (t, rep) := chosen then
-        let spans := g.spans
-        items := items.push
-          { name := t.name, ty := t.fnTy
-            body := renderBody req.style t
-            decl := renderDef req.style t t.name rep.patched
-            aux := t.aux.map fun (n, ps, b) => renderAux req.style n ps b
-            imports := typingImports t
-            spans, text := joinSpans sc.input spans
-            computable := t.computable
-            baseCases := rep.patched
-            report := rep, cost := t.cost }
+        items := items.push (mkItem req.style sc.input t rep g.spans)
   return { items, rejected }
 
 /-- Run the whole pipeline, checking values with the interpreter. Pure. -/
 def analyze (req : Request) : Result :=
   analyzeWith (m := Id)
-    { check := fun g t => verify req.verify t req.values g.guards req.tables
-      typecheck := fun _ => none }
+    { check := fun cfg t points guards => verify cfg t points guards req.tables
+      typecheck := fun _ => .ok none }
     req
 
 /-- Run the whole pipeline with the engine `req.verify.engine` names. The Lean engines need a
@@ -160,10 +188,10 @@ def run (session : LeanEngine.Session) (req : Request) : IO Result :=
   if !req.verify.engine.usesLean then pure (analyze req)
   else
     analyzeWith
-      { check := fun g t => session.check req.verify t req.values g.guards req.tables
-        typecheck := fun t =>
-          if session.cfg.elabNoncomputable || t.computable then session.typecheck t req.tables
-          else pure none }
+      { check := fun cfg t points guards => session.check cfg t points guards req.tables
+        typecheck := fun t => do
+          if !(session.cfg.elabNoncomputable || t.computable) then return .ok none
+          return (← session.typecheck t req.tables).map some }
       req
 
 end GenExpr

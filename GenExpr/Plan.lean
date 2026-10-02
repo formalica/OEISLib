@@ -281,4 +281,63 @@ def plan (sc : Scan) (cfg : PlanConfig) : PlanResult := Id.run do
       (a.rank == b.rank && (a.cost < b.cost || (a.cost == b.cost && a.order < b.order)))
   return { kinds, goals := sorted, rejected }
 
+/-! ## Propositions -/
+
+/-- A statement to check: a relation chain over its free variables, under the guards on them. -/
+structure PropGoal where
+  rel : Ast
+  /-- Free variables in order of first occurrence; they become the `∀` binders. -/
+  vars : Array String
+  guards : Array Guard
+  span : Span
+  cost : Nat
+deriving Inhabited
+
+namespace PropGoal
+
+def spans (g : PropGoal) : Array Span :=
+  ((g.guards.map (·.span)).push g.span).qsort fun a b => a.start < b.start
+
+end PropGoal
+
+/-- Statements the input makes, one group per fragment, readings cheapest first. A chain that
+defines something (`a(n) = n^2 = n*n`) is a statement too, but only once every name it applies
+is `known`: a theorem cannot have a hole, so `a` must already be a function the caller supplied. -/
+def planProps (sc : Scan) (arity : Nat) (known : String → Bool) :
+    Array (Array PropGoal) × Array (Span × Reject) := Id.run do
+  let mut guards : Array Guard := #[]
+  for seg in sc.chosen do
+    for r in seg.alts do
+      if let some (var, op, bound) := guardOf r.ast then
+        guards := guards.push { var, op, bound, span := seg.span }
+  let mut groups : Array (Array PropGoal) := #[]
+  let mut rejected : Array (Span × Reject) := #[]
+  for seg in sc.chosen do
+    let mut group : Array PropGoal := #[]
+    let mut why : Option Reject := none
+    for r in seg.alts.toArray.qsort (fun a b => a.cost < b.cost) do
+      unless r.ast matches .rel .. do continue
+      if (guardOf r.ast).isSome then continue
+      match (appliedHeads r.ast).find? (!known ·) with
+      | some h =>
+        why := some (.hole h)
+        continue
+      | none => pure ()
+      let vars := (nameInfo sc.cls #[] r.ast).unbound
+      if vars.size != arity then
+        why := some (.tooManyFreeVars vars.toList)
+        continue
+      group := group.push
+        { rel := r.ast, vars, guards := guards.filter (vars.contains ·.var), span := seg.span
+          cost := r.cost }
+    if !group.isEmpty then groups := groups.push group
+    else if let some w := why then rejected := rejected.push (seg.span, w)
+  -- Fragments that never made it into the cover still explain what went wrong.
+  for seg in sc.all do
+    if sc.chosen.any fun g => g.span.start ≤ seg.span.start && seg.span.stop ≤ g.span.stop then
+      continue
+    for reason in seg.reasons do
+      if reason != .bareAtom then rejected := rejected.push (seg.span, reason)
+  return (groups, rejected)
+
 end GenExpr

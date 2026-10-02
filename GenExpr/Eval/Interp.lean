@@ -305,6 +305,31 @@ private def decVal (whole frac : String) : Ty → EvalM Val
 private def memoKey (name : String) (args : Array Int) : String :=
   name ++ "|" ++ String.intercalate "," (args.toList.map toString)
 
+/-- A decided proposition is `1` or `0`, which is also what a `decide` probe prints. -/
+private def ofBool (b : Bool) : Val := .nat (if b then 1 else 0)
+
+private def isTrue (v : Val) : Bool := v == .nat 1
+
+/-- One relation between two values at the type the relation was chosen at. -/
+private def relate (key : String) (a b : Val) : EvalM Bool := do
+  match key with
+  | "∣" =>
+    let x ← asInt a
+    let y ← asInt b
+    -- Lean's `∣`: `0 ∣ y` iff `y = 0`.
+    pure (if x == 0 then y == 0 else y % x == 0)
+  | _ =>
+    let x := a.toRat
+    let y := b.toRat
+    match key with
+    | "=" => pure (x == y)
+    | "≠" => pure (x != y)
+    | "<" => pure (x < y)
+    | "≤" => pure (x ≤ y)
+    | ">" => pure (x > y)
+    | "≥" => pure (x ≥ y)
+    | k => throw (.unsupported s!"relation {k}")
+
 mutual
 
 partial def evalExpr (ctx : EvalCtx) (locals : Array (String × Val)) : TExpr → EvalM Val
@@ -330,6 +355,22 @@ partial def evalExpr (ctx : EvalCtx) (locals : Array (String × Val)) : TExpr �
       | none =>
         modify fun s => { s with usedUnknown := true }
         pure (zeroOf alt.result)
+    else if alt.result == .prop then
+      -- Short-circuit exactly as Lean's `Decidable` instances do, so a false hypothesis never
+      -- evaluates a conclusion that might not be defined there.
+      match alt.key with
+      | "∧" =>
+        if isTrue (← evalExpr ctx locals args[0]!) then evalExpr ctx locals args[1]!
+        else pure (ofBool false)
+      | "→" =>
+        if isTrue (← evalExpr ctx locals args[0]!) then evalExpr ctx locals args[1]!
+        else pure (ofBool true)
+      | "pairwise" =>
+        let vs ← args.mapM (evalExpr ctx locals)
+        pure (ofBool (vs.all fun x => x.toRat == vs[0]!.toRat))
+      | key =>
+        let vs ← args.mapM (evalExpr ctx locals)
+        pure (ofBool (← relate key vs[0]! vs[1]!))
     else
       let vs ← args.mapM (evalExpr ctx locals)
       match vs.size with

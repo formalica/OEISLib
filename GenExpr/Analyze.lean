@@ -59,7 +59,8 @@ partial def nameInfo (cls : Classifier) (locals : Array String) : Ast → NameIn
       else .ground
     | .func => .ground
     | .unknown =>
-      if cls.prescan.applied.contains name then { funcHoles := #[name] }
+      if cls.prescan.applied.contains name && !cls.prescan.bare.contains name then
+        { funcHoles := #[name] }
       else { freeVars := #[name] }
   | .app head args _ =>
     let here : NameInfo :=
@@ -112,5 +113,16 @@ def intLit? : Ast → Option Int
   | .num k _ => some (Int.ofNat k)
   | .un .neg e _ => (intLit? e).map (fun k => -k)
   | _ => none
+
+/-- Number of nodes; how "big" a member of a relation chain is. -/
+partial def astSize (e : Ast) : Nat := e.children.foldl (fun acc c => acc + astSize c) 1
+
+/-- Every name used as a call head. -/
+partial def appliedHeads (e : Ast) : Array String :=
+  let here := match e with
+    | .app h _ _ => #[h]
+    | _ => #[]
+  e.children.foldl (fun acc c => (appliedHeads c).foldl
+    (fun a n => if a.contains n then a else a.push n) acc) here
 
 end GenExpr

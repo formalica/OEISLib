@@ -80,6 +80,10 @@ the reported outcome when the catalogue does not supply it. -/
 #guard trees ["T"] [] "A(x) = 1 + T(x) - T^2(x)/2 + T(x^2)/2"
   == "(A(x) = (((1 + T(x)) - ((T(x) ^ 2) / 2)) + (T((x ^ 2)) / 2)))"
 
+-- `n` also appears as an operand (`n+1`), so `n(n+1)` is a product, not a call to a hole.
+#guard trees [] [] "2 | n(n+1)" == "(2 | (n * (n + 1)))"
+#guard trees [] [] "n(n+1)/2" == "((n * (n + 1)) / 2)"
+
 /-! ### Fragments that state nothing
 
 A lone name, and equally a bare call, are not formulas. -/

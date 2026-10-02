@@ -166,21 +166,28 @@ private def probeArg (i : Nat) : Ty → Option String
   | _ => none
 
 /-- Source defining the candidate as emitted, its auxiliaries and stubs, inside namespace `ns`.
-With `withProbe`, also a `probe : Array Int → String` that evaluates it. -/
+With `withProbe`, also a `probe : Array Int → String` that evaluates it; a statement is then
+written as a reducible predicate so that `decide` can see through it. -/
 def snippet (st : RenderStyle) (t : Typing) (patched : Array (Array Int × Int))
     (tables : Array (String × Array (Array Int × Int))) (ns : String) (junk : Int)
-    (withProbe : Bool) : String :=
+    (withProbe : Bool) (form : RecForm := recFormOf t) : String :=
   let used := calledKeys t
   let stubs := (tables.filter fun (n, _) => used.contains n).map fun (n, rows) =>
     renderStub n rows junk
   let aux := t.aux.map fun (n, ps, b) => renderAux st n ps b
-  let main := renderDef st t t.name patched
+  let isProp := t.ret == .prop
+  let main :=
+    if isProp && withProbe then
+      let bs := String.join (t.params.toList.map fun (n, ty) => s!" ({n} : {ty.render})")
+      s!"abbrev {t.name}{bs} : Prop :=\n  {renderBody st t}"
+    else renderDef st t t.name patched form junk
+  let call (args : Array String) : String :=
+    let app := String.intercalate " " (t.name :: args.toList)
+    if isProp then s!"if decide ({app}) then (1 : Int) else 0" else app
   let probe :=
     match (t.params.mapIdx fun i (_, ty) => probeArg i ty).mapM id with
     | some args =>
-      if withProbe then
-        #[s!"def probe (args : Array Int) : String :=\n  toString ({t.name} " ++
-          String.intercalate " " args.toList ++ ")"]
+      if withProbe then #[s!"def probe (args : Array Int) : String :=\n  toString ({call args})"]
       else #[]
     | none => #[]
   s!"namespace {ns}\n\n" ++ String.intercalate "\n\n" (stubs ++ aux ++ #[main] ++ probe).toList ++
@@ -215,33 +222,43 @@ private def evalWithTimeout (s : Session) (f : Array Int → String) (args : Arr
 private structure Compiled where
   probes : Array (Array Int → String)
   env : Environment
+  form : RecForm
+
+/-- What the evaluator learned about the declaration: whether any rendering elaborated, and
+which rung of the recursion ladder it was. -/
+structure Elaboration where
+  elaborated : Option Bool := none
+  form : Option RecForm := none
 
 /-- A point evaluator for `runPolicy`. The declaration is re-elaborated whenever the set of base
-cases grows; the returned flag records whether any elaboration succeeded. -/
+cases grows, climbing the recursion ladder until a rung elaborates. -/
 def Session.evaluator (s : Session) (t : Typing) (tables : Array (String × Array (Array Int × Int))) :
-    IO ((Array (Array Int × Int) → Array Int → IO Outcome) × IO.Ref (Option Bool)) := do
+    IO ((Array (Array Int × Int) → Array Int → IO Outcome) × IO.Ref Elaboration) := do
   let cache : IO.Ref (Option (Array (Array Int × Int) × Except Reject Compiled)) ← IO.mkRef none
-  let elaborated : IO.Ref (Option Bool) ← IO.mkRef none
+  let info : IO.Ref Elaboration ← IO.mkRef {}
   let recursive := usesSelf t.expr
   let imports := typingImports t
   let usesTables := tables.any fun (n, _) => (calledKeys t).contains n
-  let junks := if usesTables then junkValues else #[0]
+  -- A junk arm or exhausted fuel must not pass for a value, so recursion gets two renderings too.
+  let junks := if usesTables || recursive then junkValues else #[0]
   let build (patched : Array (Array Int × Int)) : IO (Except Reject Compiled) := do
-    let ns ← freshNamespace s
-    let src := String.intercalate "\n" (junks.toList.mapIdx fun j junk =>
-      snippet s.cfg.style t patched tables s!"{ns}_{j}" junk true)
-    match ← s.elaborate imports src with
-    | .error msg =>
-      if (← elaborated.get).isNone then elaborated.set (some false)
-      return .error (.elabError msg)
-    | .ok env =>
-      elaborated.set (some true)
-      let mut probes := #[]
-      for j in [0:junks.size] do
-        match loadProbe env {} s!"{ns}_{j}.probe".toName with
-        | .ok f => probes := probes.push f
-        | .error e => return .error (.elabError s!"cannot evaluate: {oneLine e}")
-      return .ok { probes, env }
+    let mut lastError := ""
+    for form in (recFormOf t).ladder do
+      let ns ← freshNamespace s
+      let src := String.intercalate "\n" (junks.toList.mapIdx fun j junk =>
+        snippet s.cfg.style t patched tables s!"{ns}_{j}" junk true form)
+      match ← s.elaborate imports src with
+      | .error msg => lastError := msg
+      | .ok env =>
+        info.modify ({ · with elaborated := some true, form := some form })
+        let mut probes := #[]
+        for j in [0:junks.size] do
+          match loadProbe env {} s!"{ns}_{j}.probe".toName with
+          | .ok f => probes := probes.push f
+          | .error e => return .error (.elabError s!"cannot evaluate: {oneLine e}")
+        return .ok { probes, env, form }
+    if (← info.get).elaborated.isNone then info.modify ({ · with elaborated := some false })
+    return .error (.elabError lastError)
   let eval (patched : Array (Array Int × Int)) (args : Array Int) : IO Outcome := do
     let compiled ← match ← cache.get with
       | some (key, c) => if key == patched then pure c else do
@@ -262,17 +279,23 @@ def Session.evaluator (s : Session) (t : Typing) (tables : Array (String × Arra
         match ← evalWithTimeout s f args with
         | some v => results := results.push v
         | none => return .timeout
-      if results.any (· != results[0]!) then return .unknown
+      if results.any (· != results[0]!) then
+        -- With recursion the junk may be a missing base case, which a patch can supply.
+        return if recursive then .undetermined else .unknown
       return .value results[0]!
-  return (eval, elaborated)
+  return (eval, info)
 
-/-- Elaborate the emitted declaration without evaluating it. -/
+/-- Elaborate the emitted declaration without evaluating it, climbing the recursion ladder.
+Returns the rung that elaborated, or why none did. -/
 def Session.typecheck (s : Session) (t : Typing) (tables : Array (String × Array (Array Int × Int)))
-    (patched : Array (Array Int × Int) := #[]) : IO (Option Reject) := do
-  let ns ← freshNamespace s
-  match ← s.elaborate (typingImports t) (snippet s.cfg.style t patched tables ns 0 false) with
-  | .ok _ => return none
-  | .error msg => return some (.elabError msg)
+    (patched : Array (Array Int × Int) := #[]) : IO (Except Reject RecForm) := do
+  let mut lastError := ""
+  for form in (recFormOf t).ladder do
+    let ns ← freshNamespace s
+    match ← s.elaborate (typingImports t) (snippet s.cfg.style t patched tables ns 0 false form) with
+    | .ok _ => return .ok form
+    | .error msg => lastError := msg
+  return .error (.elabError lastError)
 
 /-! ## Engines -/
 
@@ -281,14 +304,17 @@ def Session.verifyLean (s : Session) (cfg : VerifyConfig) (t : Typing)
     (points : Array (Array Int × Int)) (guards : Array Guard)
     (tables : Array (String × Array (Array Int × Int))) : IO VerifyReport := do
   if !t.computable then
-    let tc ← if s.cfg.elabNoncomputable then s.typecheck t tables else pure none
-    return { accepted := false, reason := some (tc.getD .notComputable)
-             elaborated := if s.cfg.elabNoncomputable then some tc.isNone else none }
+    if !s.cfg.elabNoncomputable then return { accepted := false, reason := some .notComputable }
+    return match ← s.typecheck t tables with
+      | .ok form => { accepted := false, reason := some .notComputable, elaborated := some true
+                      recForm := some form }
+      | .error rj => { accepted := false, reason := some rj, elaborated := some false }
   let bound := (t.params[0]?.map (·.1)).bind (guardLowerBound guards)
-  let (eval, elaborated) ← s.evaluator t tables
+  let (eval, info) ← s.evaluator t tables
   let r ← runPolicy cfg points bound eval
+  let e ← info.get
   return { r with leanChecked := (r.statuses.filter (·.isGood)).size
-                  elaborated := ← elaborated.get }
+                  elaborated := e.elaborated, recForm := e.form }
 
 /-- Confirm an interpreter verdict with Lean. Only points the interpreter already settled are
 evaluated, so a slow Lean evaluation can only time out, never run unbounded on a point that was
@@ -297,7 +323,7 @@ def Session.confirm (s : Session) (t : Typing) (r : VerifyReport)
     (points : Array (Array Int × Int)) (tables : Array (String × Array (Array Int × Int))) :
     IO VerifyReport := do
   if !r.accepted then return r
-  let (eval, elaborated) ← s.evaluator t tables
+  let (eval, info) ← s.evaluator t tables
   let mut checked := 0
   let mut i := 0
   for (args, expected) in points do
@@ -307,15 +333,17 @@ def Session.confirm (s : Session) (t : Typing) (r : VerifyReport)
         if v == toString expected then checked := checked + 1
         else
           return { r with accepted := false, leanChecked := checked, elaborated := some true
+                          recForm := (← info.get).form
                           reason := some (.engineDisagreement i (toString expected) v) }
-      | .unknown => pure ()
+      | .unknown | .undetermined => pure ()
       -- Later points are larger and only slower; one abandoned thread is enough.
       | .timeout => break
       | .error rj | .fatal rj =>
         return { r with accepted := false, leanChecked := checked
-                        elaborated := ← elaborated.get, reason := some rj }
+                        elaborated := (← info.get).elaborated, reason := some rj }
     i := i + 1
-  return { r with leanChecked := checked, elaborated := ← elaborated.get }
+  let e ← info.get
+  return { r with leanChecked := checked, elaborated := e.elaborated, recForm := e.form }
 
 private def statusText : PointStatus → String
   | .pass => "ok" | .patched => "base case" | .fail g => g | .unknown => "unknown"

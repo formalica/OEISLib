@@ -214,6 +214,44 @@ def narrowings : Array Alt := #[
 
 def standard : Registry := { alts := arithmetic ++ functions }
 
+/-! ## Propositions
+
+Relations, conjunction and implication are alternatives with result type `prop`. They are built
+on demand by `GenExpr.Infer` rather than listed in `standard`, since a relation is never an
+operand of arithmetic. -/
+
+/-- The Lean symbol of a relation, and the types it is decidable at. -/
+def relSymbol : RelOp → String × List Ty
+  | .eq => ("=", [.nat, .int, .rat, .real, .complex])
+  | .ne => ("≠", [.nat, .int, .rat, .real, .complex])
+  | .lt => ("<", [.nat, .int, .rat, .real])
+  | .le => ("≤", [.nat, .int, .rat, .real])
+  | .gt => (">", [.nat, .int, .rat, .real])
+  | .ge => ("≥", [.nat, .int, .rat, .real])
+  | .divides => ("∣", [.nat, .int])
+
+/-- `l op r` with both sides at `t`. -/
+def relAlt (op : RelOp) (t : Ty) : Alt :=
+  let sym := (relSymbol op).1
+  { key := sym, template := "{0} " ++ sym ++ " {1}", params := #[t, t], result := .prop
+    computable := t.isComputable, prec := 50, argPrec := #[51, 51] }
+
+def andAlt : Alt :=
+  { key := "∧", template := "{0} ∧ {1}", params := #[.prop, .prop], result := .prop
+    prec := 35, argPrec := #[36, 35] }
+
+def impAlt : Alt :=
+  { key := "→", template := "{0} → {1}", params := #[.prop, .prop], result := .prop
+    prec := 25, argPrec := #[26, 25] }
+
+/-- All `n` members equal, written `List.Pairwise` when every member is too long to repeat. -/
+def pairwiseAlt (t : Ty) (n : Nat) : Alt :=
+  { key := "pairwise"
+    template := "List.Pairwise (· = ·) [" ++
+      String.intercalate ", " ((List.range n).map fun i => s!"\{{i}}") ++ "]"
+    params := Array.replicate n t, result := .prop, computable := t.isComputable
+    prec := 1023, argPrec := Array.replicate n 0 }
+
 /-- Modules providing the notation (`ℕ`, `ℚ`, …) and arithmetic instances a type needs. -/
 def typeImports : Ty → Array String
   | .nat => #["Mathlib.Data.Nat.Notation"]

@@ -17,6 +17,8 @@ def NQ : FnTy := { args := [.nat], ret := .rat }
 def NR : FnTy := { args := [.nat], ret := .real }
 def R : FnTy := { args := [], ret := .real }
 def Nc : FnTy := { args := [], ret := .nat }
+def ZZ : FnTy := { args := [.int], ret := .int }
+def P1 : FnTy := { args := [.nat], ret := .prop }
 
 /-- One entry of the corpus. `expect` is the body the parser should settle on, or `none` when the
 line must be rejected. -/
@@ -34,6 +36,8 @@ structure Case where
   tables : Array (String × Array (Array Int × Int)) := #[]
   expect : Option String
   expectDecl : Option String := none
+  /-- Every result's body, in order, when the line holds several formulas. -/
+  expectAll : Option (Array String) := none
   /-- Some rejection reason must contain this. -/
   expectReason : Option String := none
   /-- Only meaningful when values are checked by Lean. -/
@@ -149,7 +153,43 @@ def corpus : Array Case := #[
     values := [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181,
       6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269,
       2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169, 63245986]
-    expect := some "«self» (n - 1) + «self» (n - 2)" }
+    expect := some "«self» (n - 1) + «self» (n - 2)" },
+  { name := "26 non-structural recursion, pattern form"
+    input := "a(n) = a(floor(n/2)) + n mod 2", values := [0, 1, 1, 2, 1, 2, 2, 3, 1], allowed := 1
+    expect := some "«self» (n / 2) + n % 2"
+    expectDecl := some "def a : ℕ → ℕ\n  | 0 => 0\n  | n + 1 => a ((n + 1) / 2) + (n + 1) % 2" },
+  { name := "27 integer argument, well-founded form"
+    input := "a(n) = a(n-1) + 2*n", types := #[ZZ], values := [0, 2, 6, 12, 20], start := 0
+    allowed := 1
+    expect := some "«self» (n - 1) + 2 * n"
+    expectDecl := some ("def a (n : ℤ) : ℤ :=\n  if n < 1 then if n = 0 then 0 else 0 " ++
+      "else a (n - 1) + 2 * n\ntermination_by n.toNat\ndecreasing_by all_goals omega") },
+  { name := "28 nested recursion, fuel form"
+    input := "a(n) = a(n-a(n-1)) + a(n-a(n-2)) for n > 2", start := 1
+    values := [1, 1, 2, 3, 3, 4, 5, 5, 6, 6, 6, 8]
+    expect := some "«self» (n - «self» (n - 1)) + «self» (n - «self» (n - 2))"
+    expectDecl := some ("def a (n : ℕ) : ℕ :=\n  go (2 * n + 2) n\nwhere\n  go : ℕ → ℕ → ℕ\n" ++
+      "    | 0, _ => 0\n    | fuel + 1, n => if n = 1 then 1 else if n = 2 then 1 else " ++
+      "go fuel (n - go fuel (n - 1)) + go fuel (n - go fuel (n - 2))") },
+  { name := "14 two statements in one line"
+    input := "A046080(a(n)) = 1, A046109(a(n)) = 12. - Jean-Christophe Hervé, Dec 01 2013"
+    names := #[], types := #[P1], values := [0, 0, 0]
+    tables := #[("a", table1 [(0, 5), (1, 13), (2, 17)]),
+      ("A046080", table1 [(5, 1), (13, 1), (17, 1)]),
+      ("A046109", table1 [(5, 12), (13, 12), (17, 12)])]
+    expect := some "∀ n : ℕ, A046080 (a n) = 1"
+    expectAll := some #["∀ n : ℕ, A046080 (a n) = 1", "∀ n : ℕ, A046109 (a n) = 12"] },
+  { name := "29 statement under a stated domain"
+    input := "n^2 > 2n for n > 2", names := #[], types := #[P1], values := [0, 0, 0, 0, 0, 0]
+    expect := some "∀ n : ℕ, n > 2 → n ^ 2 > 2 * n"
+    expectDecl := some "theorem statement : ∀ n : ℕ, n > 2 → n ^ 2 > 2 * n := by\n  sorry" },
+  { name := "30 equality chain repeats its smallest member"
+    input := "a(n) = n^2 = n*n", names := #[], types := #[P1], values := [0, 0, 0]
+    tables := #[("a", table1 [(0, 0), (1, 1), (2, 4)])]
+    expect := some "∀ n : ℕ, a n = n ^ 2 ∧ a n = n * n" },
+  { name := "31 a false statement is rejected"
+    input := "2^n > n^2", names := #[], types := #[P1], values := [0, 0, 0, 0, 0, 0]
+    expect := none, expectReason := some "point 2" }
 ]
 
 def request (c : Case) (engine : Engine) : Request :=
@@ -163,6 +203,8 @@ def judge (c : Case) (r : GenExpr.Result) : GenExprTests.Result := Id.run do
   let mut out := check c.name c.expect got
   if let some d := c.expectDecl then
     out := out ++ check (c.name ++ " (decl)") (some d) (r.items[0]?.map (·.decl))
+  if let some all := c.expectAll then
+    out := out ++ check (c.name ++ " (all)") all (r.items.map (·.body))
   if let some needle := c.expectReason then
     let reasons := r.rejected.toList.map fun (_, rj) => rj.describe
     out := out ++ checkTrue (c.name ++ " (reason)")

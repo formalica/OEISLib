@@ -128,4 +128,72 @@ private def withTable (s : String) (vs : List Int) (tbl : Array (Array Int × In
 #guard (analyze (withTable "a(n) = F(n)+1" [1, 2, 3, 5]
     #[(#[0], 0), (#[1], 1), (#[2], 2)])).items[0]!.report.trace == "...?"
 
+/-! ### The recursion ladder
+
+The cheapest form the shape allows: pattern arms for a `ℕ` argument, even when the call is not
+structural, since Lean finds that termination argument itself; `termination_by` for a `ℤ`
+argument; fuel for nested recursion, which Lean cannot see terminate at all. Every declaration
+here was elaborated and evaluated by the Lean engine. -/
+
+private def seqFrom (start : Int) (vs : List Int) : Array (Array Int × Int) :=
+  vs.toArray.mapIdx fun i v => (#[(i : Int) + start], v)
+
+private def declOf (r : Request) : String :=
+  match (analyze r).items[0]? with
+  | some i => i.decl
+  | none => "<none>"
+
+#guard declOf { input := "a(n) = a(floor(n/2)) + n mod 2", names := #["a"]
+                values := seqFrom 0 [0, 1, 1, 2, 1, 2, 2, 3, 1]
+                verify := { engine := .internal, allowedFailures := 1 } }
+  == "def a : ℕ → ℕ\n  | 0 => 0\n  | n + 1 => a ((n + 1) / 2) + (n + 1) % 2"
+
+#guard declOf { input := "a(n) = a(n-1) + 2*n", names := #["a"]
+                types := #[{ args := [.int], ret := .int }], values := seqFrom (-1) [0, 0, 2, 6, 12]
+                verify := { engine := .internal, allowedFailures := 1 } }
+  == "def a (n : ℤ) : ℤ :=\n  if n < 0 then if n = (-1) then 0 else 0 else a (n - 1) + 2 * n\n" ++
+     "termination_by (n - (-1)).toNat\ndecreasing_by all_goals omega"
+
+-- Hofstadter's Q: each call's argument contains another call.
+#guard declOf { input := "a(n) = a(n-a(n-1)) + a(n-a(n-2)) for n > 2", names := #["a"]
+                values := seqFrom 1 [1, 1, 2, 3, 3, 4, 5, 5, 6, 6, 6, 8]
+                verify := { engine := .internal } }
+  == "def a (n : ℕ) : ℕ :=\n  go (2 * n + 2) n\nwhere\n  go : ℕ → ℕ → ℕ\n    | 0, _ => 0\n" ++
+     "    | fuel + 1, n => if n = 1 then 1 else if n = 2 then 1 else " ++
+     "go fuel (n - go fuel (n - 1)) + go fuel (n - go fuel (n - 2))"
+
+/-! ### Statements
+
+A relation becomes a `∀` over its free variables, its guards become hypotheses, and it is decided
+at every data index. Each statement in the input is its own result. -/
+
+private def P1 : FnTy := { args := [.nat], ret := .prop }
+
+private def stmts (input : String) (n : Nat)
+    (tables : Array (String × Array (Array Int × Int)) := #[]) : Array String :=
+  (analyze { input, types := #[P1], tables, values := seqFrom 0 (List.replicate n 0)
+             verify := { engine := .internal } }).items.map (·.body)
+
+#guard stmts "A046080(a(n)) = 1, A046109(a(n)) = 12. - Jean-Christophe Hervé, Dec 01 2013" 3
+    #[("a", seqFrom 0 [5, 13, 17]), ("A046080", #[(#[5], 1), (#[13], 1), (#[17], 1)]),
+      ("A046109", #[(#[5], 12), (#[13], 12), (#[17], 12)])]
+  == #["∀ n : ℕ, A046080 (a n) = 1", "∀ n : ℕ, A046109 (a n) = 12"]
+
+#guard stmts "n^2 > 2n for n > 2" 7 == #["∀ n : ℕ, n > 2 → n ^ 2 > 2 * n"]
+#guard stmts "2 | n(n+1)" 5 == #["∀ n : ℕ, 2 ∣ n * (n + 1)"]
+
+-- An equality chain repeats its smallest member, or lists big members once.
+#guard stmts "a(n) = n^2 = n*n" 3 #[("a", seqFrom 0 [0, 1, 4])]
+  == #["∀ n : ℕ, a n = n ^ 2 ∧ a n = n * n"]
+#guard stmts "(n+1)^2 = n^2+2n+1 = (n+1)*(n+1)" 4
+  == #["∀ n : ℕ, List.Pairwise (· = ·) [(n + 1) ^ 2, n ^ 2 + 2 * n + 1, (n + 1) * (n + 1)]"]
+
+-- False at n = 2, so no statement survives; and without the function `a` there is nothing to state.
+#guard stmts "2^n > n^2" 6 == #[]
+#guard stmts "a(n) = n^2 = n*n" 3 == #[]
+
+#guard (analyze { input := "n^2 > 2n for n > 2", types := #[P1], values := seqFrom 0 [0, 0, 0]
+                  verify := { engine := .internal } }).items[0]!.decl
+  == "theorem statement : ∀ n : ℕ, n > 2 → n ^ 2 > 2 * n := by\n  sorry"
+
 end GenExprTests.VerifyTests

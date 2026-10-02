@@ -27,6 +27,9 @@ structure Prescan where
   /-- Names written immediately before `(`. An unresolved one is a function hole wherever it
   occurs, including bare, which is what makes `1 + T(x)` fail rather than read as `1 + T*x`. -/
   applied : Array String := #[]
+  /-- Names used as a plain operand somewhere. Such a name is a variable even where it is
+  followed by `(`, which is what makes `n(n+1)/2` a product: `n + 1` shows `n` is a value. -/
+  bare : Array String := #[]
 deriving Inhabited, Repr
 
 namespace Prescan
@@ -76,9 +79,14 @@ def run (toks : Array Token) : Prescan := Id.run do
     | .lparen | .lbrace | .lbrack => depth := depth + 1
     | .rparen | .rbrace | .rbrack => depth := depth - 1
     | .ident =>
-      if (toks[i + 1]?).any (fun n => n.kind == .lparen && !n.spaceBefore) then
+      let next := toks[i + 1]?
+      if next.any (fun n => n.kind == .lparen && !n.spaceBefore) then
         if !out.applied.contains t.text then
           out := { out with applied := out.applied.push t.text }
+      -- `T^2(x)` and `log_2` are still applications, not operand uses.
+      else if !next.any (fun n => (n.isOp "^" || n.isOp "_") && !n.spaceBefore) then
+        if !out.bare.contains t.text then
+          out := { out with bare := out.bare.push t.text }
       -- Only depth 0: `Sum_{k=0}^n` and `integral(x=0)^1` must not register `k` or `x`.
       if depth == 0 then
         if (toks[i + 1]?).any (·.kind == .lparen) then

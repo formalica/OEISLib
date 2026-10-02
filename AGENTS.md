@@ -313,6 +313,23 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   formula that fails its data is not replaced by an unrunnable one.
 - **`internalThenLean` only evaluates in Lean the points the interpreter already settled**, so a
   slow Lean evaluation can time out but never runs on a point that was never going to finish.
+- **Recursion ladder** (`RecForm`): *structural* pattern arms → *well-founded* `if n < B then …
+  else …` + `termination_by` / `decreasing_by all_goals omega` → *fuel* (`where go`). Lean already
+  proves non-structural calls such as `a((n+1)/2)` in the pattern form, so well-founded is only
+  needed for `ℤ` arguments, and fuel only for nested recursion (`a(n-a(n-1))`), which Lean rejects
+  otherwise. The pure path predicts the rung from the term's shape (`recFormOf`); the Lean engine
+  climbs the ladder until one elaborates and reports it in `VerifyReport.recForm`.
+- **Junk is rendered twice for recursive definitions too**, not just for tables: a value that
+  leaned on a junk arm or exhausted fuel would otherwise pass. Such a point is `undetermined` —
+  patchable at a prefix position, otherwise merely unknown.
+- **Statements** (`ret := .prop`): a relation fragment becomes `∀ vars, guards → conjuncts`,
+  decided at each data index (expected value 1) by the interpreter and by a `decide` probe over a
+  reducible `abbrev` in Lean. An equality chain repeats its smallest member, or uses
+  `List.Pairwise` when every member has ≥ 5 nodes; every applied name must be known, so
+  `a(n) = n^2 = n*n` is a statement only once `a` is supplied. Each statement in a line is its
+  own item, emitted as `theorem statement : … := by sorry` with the body stored name-free.
+- **A name used as a plain operand anywhere is a variable**, even where it is followed by `(`:
+  `2 | n(n+1)` is a product because `n+1` shows `n` is a value (`Prescan.bare`).
 
 ## Lean 4.34 gotchas (this toolchain)
 
@@ -383,17 +400,15 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
    impractical. Revisit if the A000 bucket build turns out too slow.
 10. Consider exporting the DB to Parquet/JSONL — HF's dataset viewer cannot read SQLite.
 11. **Finish GenExprParser.** The pipeline is complete and green end to end with all four
-    verification engines: raw text → Lean that elaborates, evaluates and matches the data.
-    `lake exe genexpr-test --engine crossCheck` runs 28 checks; `--check-imports` confirms all 107
+    verification engines, the full recursion ladder and `Prop` statements.
+    `lake exe genexpr-test --engine crossCheck` runs 35 checks; `--check-imports` confirms all 114
     declared import lists. Remaining:
-    * *Recursion ladder* — only the structural `match` form is emitted; well-founded
-      (`termination_by` / `decreasing_by`) and fuel forms are needed for `a(n) = a(n/2) + 1`.
-    * *`Prop` goals* — `PlanResult.relations` already collects the candidates
-      (`A046080(a(n)) = 1`); nothing turns them into theorems yet.
     * *OEISParser* — the OEIS-specific wrapper that feeds sequences in as custom alternatives and
       writes results to `formalization_item`. Should use `run` with `internalThenLean` and one
       long-lived `LeanEngine.Session` per process.
     * *`oeis-verify`* — can reuse `LeanEngine.Session.check` / `runPolicy` directly.
+    * *Multi-argument recursion* (`T(n,k)`) always takes the fuel rung; a lexicographic
+      `termination_by` would be cheaper to prove things about.
     * *Later* — LaTeX/Wolfram frontends (`GenExpr.Ast` is the extension point), `PowerSeries` /
       `EReal` (`Ty` has an `other` constructor reserved).
 12. `lake build` with no target builds `LOEIS` (792k modules) — it is in `defaultTargets`. Use
@@ -528,6 +543,17 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   3.9 GB, a targeted set 2–14 s; environments are never freed, and importing several analysis
   sets in one process was OOM-killed at 5.8 GB, hence one shared environment per process and
   child processes for import checks.
+- **2026-10-03** — GenExprParser: the rest of the recursion ladder and `Prop` statements, both
+  absent before. `RecForm` + `recFormOf` in `Render`, with well-founded and fuel renderings in
+  `renderDef`; the Lean engine climbs the ladder until a rung elaborates. `planProps` /
+  `typeProp` / `inferProp` turn relation fragments into guarded `∀` statements; the interpreter
+  decides them, Lean checks them with `decide`. Under all three Lean engines Lean independently
+  picked the rung the pure path predicted: structural for `a(floor(n/2)) + n mod 2`, well-founded
+  for an `ℤ` argument, fuel for Hofstadter's Q. Spec case 14 now yields its two theorems,
+  `∀ n : ℕ, A046080 (a n) = 1` and `∀ n : ℕ, A046109 (a n) = 12`. Found on the way: `2 | n(n+1)`
+  read `n` as an unresolved function, contradicting the spec's `n(n+1)/2` rule once the line is not
+  a definition; a name used as an operand anywhere is now a variable. Corpus 35/35 under every
+  engine, 114/114 import lists sufficient.
 
 ## RULE 0 reminder
 

@@ -291,4 +291,82 @@ def typeGoal (reg : Registry) (k : Nat) (g : Goal) (want : FnTy) : List Typing :
         expr := .node alt #[c.expr] } (some alt.params[0]!)]
   return ((direct ++ narrowed).toArray.qsort fun a b => a.cost < b.cost).toList
 
+/-! ## Statements -/
+
+private def propChoice (cost : Nat) (e : TExpr) : Choice :=
+  { cost, computable := e.computable, expr := e, transparentTop := false }
+
+/-- The `k` cheapest readings of `l op r`, each side at the same type. -/
+private def relReadings (ctx : ICtx) (op : RelOp) (l r : Ast) : List Choice := Id.run do
+  let lt := infer ctx l
+  let rt := infer ctx r
+  let mut out : List Choice := []
+  for t in (Builtins.relSymbol op).2 do
+    for combo in kbest ctx.k [lt.atMost t ctx.k, rt.atMost t ctx.k] do
+      out := out ++ [propChoice (combo[0]!.cost + combo[1]!.cost + t.level)
+        (.node (Builtins.relAlt op t) #[combo[0]!.expr, combo[1]!.expr])]
+  return ((out.toArray.qsort fun a b => a.cost < b.cost).toList).take ctx.k
+
+/-- The `k` cheapest conjunctions, one reading per conjunct. -/
+private def conjoin (k : Nat) (parts : List (List Choice)) : List Choice :=
+  (kbest k parts).filterMap fun combo =>
+    combo[0]?.map fun first =>
+      let e := combo[1:].toArray.foldl (fun acc c => TExpr.node Builtins.andAlt #[acc, c.expr])
+        first.expr
+      propChoice (combo.foldl (fun s c => s + c.cost) 0) e
+
+/-- Members at least this big are not worth repeating, so an all-equal chain of them is written
+with `List.Pairwise` instead. -/
+private def bigMember : Nat := 5
+
+/-- Readings of a relation chain. `a < b < c` is `a < b ∧ b < c`; an equality chain repeats its
+smallest member, `a(n) = n^2 = n*n` becoming `a n = n ^ 2 ∧ a n = n * n`, unless every member is
+big, in which case all of them are listed once under `List.Pairwise`. -/
+def inferProp (ctx : ICtx) : Ast → List Choice
+  | .rel h rest _ =>
+    let items := #[h] ++ rest.map (·.2)
+    let ops := rest.map (·.1)
+    if ops.all (· == .eq) && items.size > 2 then
+      if items.all (astSize · ≥ bigMember) then
+        let tabs := items.map (infer ctx)
+        let byTy := [Ty.nat, .int, .rat, .real, .complex].flatMap fun t =>
+          (kbest ctx.k (tabs.toList.map (·.atMost t ctx.k))).map fun combo =>
+            propChoice (combo.foldl (fun s c => s + c.cost) t.level)
+              (.node (Builtins.pairwiseAlt t items.size) (combo.map (·.expr)))
+        ((byTy.toArray.qsort fun a b => a.cost < b.cost).toList).take ctx.k
+      else
+        let pivot := (List.range items.size).foldl (fun best i =>
+          if astSize items[i]! < astSize items[best]! then i else best) 0
+        let pairs := (List.range items.size).filter (· != pivot) |>.map fun i =>
+          if i < pivot then relReadings ctx .eq items[i]! items[pivot]!
+          else relReadings ctx .eq items[pivot]! items[i]!
+        conjoin ctx.k pairs
+    else
+      conjoin ctx.k ((List.range ops.size).map fun i => relReadings ctx ops[i]! items[i]! items[i+1]!)
+  | _ => []
+
+/-- A guard such as `n > 1`, as a hypothesis on the bound variable. -/
+private def guardExpr (reg : Registry) (g : Guard) (t : Ty) : Option TExpr :=
+  if !t.isNumeric || (t == .nat && g.bound < 0) then none
+  else
+    let lit : TExpr :=
+      if g.bound ≥ 0 then .lit (toString g.bound) t
+      else match (reg.find "neg" 1).find? (·.params[0]? == some t) with
+        | some neg => .node neg #[.lit (toString (-g.bound)) t]
+        | none => .lit (toString g.bound) t
+    some (.node (Builtins.relAlt g.op t) #[.var g.var t, lit])
+
+/-- Type one statement with its variables at `want.args`, cheapest reading first. Guards become
+hypotheses, so `a(n) > 0 for n > 1` reads `∀ n : ℕ, n > 1 → a n > 0`. -/
+def typeProp (reg : Registry) (k : Nat) (g : PropGoal) (want : FnTy) : List Typing := Id.run do
+  if want.args.length != g.vars.size then return []
+  let params := Array.zip g.vars want.args.toArray
+  let ctx : ICtx := { reg, k, vars := params }
+  let hyps := g.guards.filterMap fun gd =>
+    (params.find? (·.1 == gd.var)).bind fun (_, t) => guardExpr reg gd t
+  return (inferProp ctx g.rel).map fun c =>
+    let body := hyps.foldr (fun h acc => TExpr.node Builtins.impAlt #[h, acc]) c.expr
+    { name := "statement", params, ret := .prop, expr := body, cost := c.cost + g.cost
+      computable := body.computable }
+
 end GenExpr

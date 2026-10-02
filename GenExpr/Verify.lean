@@ -90,6 +90,8 @@ structure VerifyReport where
   leanChecked : Nat := 0
   /-- `some true` once Lean has elaborated the emitted declaration; `none` if it was never asked. -/
   elaborated : Option Bool := none
+  /-- The rung of the recursion ladder Lean accepted, when Lean was asked. -/
+  recForm : Option RecForm := none
 deriving Inhabited
 
 namespace VerifyReport
@@ -104,6 +106,9 @@ inductive Outcome where
   | value (s : String)
   /-- It depended on a value no table knows. -/
   | unknown
+  /-- It depended on a junk base case or ran out of fuel: repairable by a base case at a
+  patchable position, otherwise merely unknown. -/
+  | undetermined
   | timeout
   /-- Could not be evaluated; repairable by a base case at a patchable position. -/
   | error (r : Reject)
@@ -160,6 +165,7 @@ def runPolicy [Monad m] (cfg : VerifyConfig) (points : Array (Array Int × Int))
         else if patchable then .patch
         else .reject (.failedAt i (toString expected) v)
       | .unknown => .unknown
+      | .undetermined => if patchable then .patch else .unknown
       | .timeout => if patchable then .patch else .timeoutRest
       | .error rj => if patchable then .patch else .reject rj
       | .fatal rj => .reject rj

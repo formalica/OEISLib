@@ -53,8 +53,10 @@ partial def render (st : RenderStyle) (ctx : Nat) : TExpr → String
   | .var n _ => n
   | .cast _ d e => s!"({render st 0 e} : {d.render})"
   | e@(.node a args) =>
+    -- `floor` on ℕ and similar identities add no syntax, so precedence passes straight through.
+    if a.template == "{0}" && args.size == 1 then render st ctx args[0]!
     -- One ascription pins an all-literal subtree that Lean would otherwise default to `ℕ`.
-    if a.result != .nat && a.result.isNumeric && allLiterals e then
+    else if a.result != .nat && a.result.isNumeric && allLiterals e then
       s!"({fill a.template (renderArgs st a args)} : {a.result.render})"
     else paren (a.prec < ctx) (fill a.template (renderArgs st a args))
   | .agg kind v lo hi dv _ hiStrict body ty =>
@@ -103,6 +105,50 @@ partial def usesSelf : TExpr → Bool
   | .node a args => a.template.startsWith selfToken || args.any usesSelf
   | e => (TExpr.children e).any usesSelf
 
+/-- A recursive call inside the argument of another, as in `a(n - a(n-1))`. Lean cannot see such
+a definition terminate, so it needs fuel. -/
+partial def nestedSelf : TExpr → Bool
+  | .node a args =>
+    (a.template.startsWith selfToken && args.any usesSelf) || args.any nestedSelf
+  | e => (TExpr.children e).any nestedSelf
+
+/-- How a recursive definition is written, from the cheapest form to the one that always
+elaborates. Each rung is tried only if the one below fails to elaborate.
+
+* `structural`: pattern arms on a single `ℕ` argument; Lean finds the termination argument
+  itself, including for non-structural calls such as `a((n+1)/2)`;
+* `wellFounded`: `if n < B then … else …` with `termination_by`, the only form for `ℤ` arguments;
+* `fuel`: an auxiliary `go` that counts down, total by construction but proving nothing about
+  termination of the original recursion. -/
+inductive RecForm where
+  | none
+  | structural
+  | wellFounded
+  | fuel
+deriving DecidableEq, Repr, Inhabited
+
+namespace RecForm
+
+def name : RecForm → String
+  | .none => "none" | .structural => "structural" | .wellFounded => "well-founded"
+  | .fuel => "fuel"
+
+/-- This rung and every rung above it. -/
+def ladder : RecForm → Array RecForm
+  | .none => #[.none]
+  | .structural => #[.structural, .wellFounded, .fuel]
+  | .wellFounded => #[.wellFounded, .fuel]
+  | .fuel => #[.fuel]
+
+end RecForm
+
+/-- The lowest rung the shape of the term allows. -/
+def recFormOf (t : Typing) : RecForm :=
+  if !usesSelf t.expr then .none
+  else if nestedSelf t.expr || t.params.size != 1 then .fuel
+  else if t.params[0]!.2 == .nat then .structural
+  else .wellFounded
+
 private def dedupStrings (xs : Array String) : Array String :=
   (xs.foldl (fun acc s => if acc.contains s then acc else acc.push s) #[]).qsort (· < ·)
 
@@ -134,41 +180,84 @@ def renderAux (st : RenderStyle) (name : String) (params : Array (String × Ty))
   let kw := if body.computable then "def" else "noncomputable def"
   s!"{kw} {name}{bs} : {body.ty.render} :=\n  {render st 0 body}"
 
-/-- A complete `def`. `patched` lists values supplied as base cases, keyed by their actual
-arguments, so that data starting at index 1 is not mis-rendered as starting at 0. -/
+/-- A proposition with its free variables bound: what a database stores for a `Prop` goal. -/
+def renderStatement (st : RenderStyle) (t : Typing) : String :=
+  let body := render st 0 t.expr
+  match t.params.toList with
+  | [] => body
+  | [(n, ty)] => s!"∀ {n} : {ty.render}, {body}"
+  | ps => "∀" ++ String.join (ps.map fun (n, ty) => s!" ({n} : {ty.render})") ++ s!", {body}"
+
+private def lit (x : Int) : String := if x < 0 then s!"({x})" else toString x
+
+/-- `if n = 1 then 4 else if … else fallback`, over every parameter. -/
+private def baseChain (names : Array String) (patched : Array (Array Int × Int))
+    (fallback : String) : String :=
+  let cond (a : Array Int) : String :=
+    String.intercalate " ∧ " ((Array.zip names a).toList.map fun (n, x) => s!"{n} = {lit x}")
+  patched.foldr (fun (a, x) acc => s!"if {cond a} then {lit x} else {acc}") fallback
+
+/-- A complete declaration. `patched` lists values supplied as base cases, keyed by their actual
+arguments, so that data starting at index 1 is not mis-rendered as starting at 0. `junk` is the
+value returned where nothing is known — below the data, or out of fuel; verification renders it
+twice with different values to tell a point that depended on it. A `Prop` becomes a theorem. -/
 def renderDef (st : RenderStyle) (t : Typing) (name : String)
-    (patched : Array (Array Int × Int) := #[]) : String :=
+    (patched : Array (Array Int × Int) := #[]) (form : RecForm := recFormOf t) (junk : Int := 0) :
+    String :=
   let body := (renderBody st t).replace selfToken name
   let sig := s!"{name}{binders t} : {t.ret.render}"
   let kw := if t.computable then "def" else "noncomputable def"
   let ty := String.intercalate " → " (t.params.toList.map (·.2.render) ++ [t.ret.render])
+  let names := t.params.map (·.1)
+  let v := names[0]?.getD "n"
   let natArg := t.params.size == 1 && t.params[0]!.2 == .nat
-  let v := (t.params[0]?.map (·.1)).getD "n"
-  let lit (x : Int) : String := if x < 0 then s!"({x})" else toString x
-  if patched.isEmpty then
-    if usesSelf t.expr then
-      s!"{kw} {sig} :=\n  {body}\ndecreasing_by all_goals simp_wf; omega"
-    else s!"{kw} {sig} :=\n  {body}"
-  else if natArg && usesSelf t.expr then
-    -- Structural form: every index below the general case gets an arm, so the recursive call
-    -- always lands on a smaller one. Indices outside the data get a junk value.
+  if t.ret == .prop then
+    s!"theorem {name} : {renderStatement st t} := by\n  sorry"
+  else
+  match form with
+  | .none =>
+    if patched.isEmpty then s!"{kw} {sig} :=\n  {body}"
+    else if natArg then
+      let arms := patched.toList.map fun (a, x) => s!"  | {a[0]!} => {lit x}"
+      s!"{kw} {name} : {ty}\n" ++ String.intercalate "\n" (arms ++ [s!"  | {v} => {body}"])
+    else s!"{kw} {sig} :=\n  {baseChain names patched body}"
+  | .structural =>
+    -- Every index below the general case gets an arm, so a recursive call always lands on a
+    -- smaller one. Indices outside the data get the junk value.
     let b := patched.foldl (fun m (a, _) => max m ((a[0]?.getD 0).toNat + 1)) 0
     let valueAt (i : Nat) : String :=
       match patched.find? fun (a, _) => a[0]? == some (i : Int) with
       | some (_, x) => lit x
-      | none => "0"
+      | none => lit junk
     let arms := (List.range b).map fun i => s!"  | {i} => {valueAt i}"
-    let shifted := simplifyOffsets v (substVar v (natPlus b (.var v .nat)) t.expr)
-    let general := s!"  | {v} + {b} => " ++ (render st 0 shifted).replace selfToken name
+    let general :=
+      if b == 0 then s!"  | {v} => {body}"
+      else
+        let shifted := simplifyOffsets v (substVar v (natPlus b (.var v .nat)) t.expr)
+        s!"  | {v} + {b} => " ++ (render st 0 shifted).replace selfToken name
     s!"{kw} {name} : {ty}\n" ++ String.intercalate "\n" (arms ++ [general])
-  else if natArg then
-    let arms := patched.toList.map fun (a, x) => s!"  | {a[0]!} => {lit x}"
-    s!"{kw} {name} : {ty}\n" ++ String.intercalate "\n" (arms ++ [s!"  | {v} => {body}"])
-  else
-    let names := t.params.map (·.1)
-    let cond (a : Array Int) : String :=
-      String.intercalate " ∧ " ((Array.zip names a).toList.map fun (n, x) => s!"{n} = {lit x}")
-    let chain := patched.foldr (fun (a, x) acc => s!"if {cond a} then {lit x} else {acc}") body
-    s!"{kw} {sig} :=\n  {chain}"
+  | .wellFounded =>
+    let firstGeneral := patched.foldl (fun m (a, _) => max m ((a[0]?.getD 0) + 1)) 0
+    let lowest := patched.foldl (fun m (a, _) => min m (a[0]?.getD 0)) firstGeneral
+    let guarded :=
+      if patched.isEmpty then body
+      else s!"if {v} < {lit firstGeneral} then {baseChain names patched (lit junk)} else {body}"
+    let measure :=
+      if natArg then v
+      else if lowest == 0 then s!"{v}.toNat"
+      else s!"({v} - {lit lowest}).toNat"
+    s!"{kw} {sig} :=\n  {guarded}\ntermination_by {measure}\ndecreasing_by all_goals omega"
+  | .fuel =>
+    let inner := (renderBody st t).replace selfToken "go fuel"
+    let size := String.intercalate " + " (t.params.toList.map fun (n, pty) =>
+      if pty == .nat then n else s!"{n}.natAbs")
+    let size := if t.params.size == 1 then size else s!"({size})"
+    let wild := String.join (names.toList.map fun _ => ", _")
+    let pats := String.join (names.toList.map fun n => s!", {n}")
+    let goTy := String.intercalate " → " ("ℕ" :: (t.params.toList.map (·.2.render)) ++
+      [t.ret.render])
+    s!"{kw} {sig} :=\n  go (2 * {size} + 2){String.join (names.toList.map (" " ++ ·))}\n" ++
+      s!"where\n  go : {goTy}\n    | 0{wild} => {lit junk}\n" ++
+      s!"    | fuel + 1{pats} => {baseChain names patched inner}"
 
 end GenExpr
