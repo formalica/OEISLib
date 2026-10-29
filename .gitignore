@@ -3,10 +3,12 @@ oeisdata/*
 /.lake
 /Metadata/*.db-wal
 /Metadata/*.db-shm
-A000027Data.lean
-A000792.lean
-
+Metadata/*
+Metadata
+/cache
+/cache/*
 .venv/
 __pycache__/
 *.egg-info/
 /Check/B*/
+Metadata/oeis.db

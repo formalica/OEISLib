@@ -1,0 +1,727 @@
+OEIS %N name templates (>= 25 sequences sharing one abstracted name pattern)
+===============================================================================
+
+Method:
+  All %N (name) fields of the 398,534 .seq files were extracted and
+  normalized: lowercased; integer literals and spelled-out number words
+  replaced by {pK} slots; references to other sequences (Annnnnn)
+  replaced by {AK} slots.
+  Names that then coincide belong to one template: its members differ only
+  by the constant parameters (or small arithmetic expressions built on
+  them) in those slots.
+
+Stats:
+  sequences total ............ 398,534
+  distinct raw templates ..... 245,149
+  templates with >= 25 ....... 704
+  sequences covered by them .. 66,238 (16.6%)
+
+Placeholders: {pK} = K-th integer constant, {AK} = K-th sequence reference.
+Templates longer than 160 chars are truncated with '...'.
+
+|  # | count | template | example members |
+|---:|------:|----------|-----------------|
+|   1 |  6070 | coordination sequence gal.{p1}.{p2}.{p3} where gal.u.t.v denotes the coordination sequence for a vertex of type v in tiling number t in the galebach list of u-u... | A310001, A311215, A312429, A313643, A314859 |
+|   2 |  2302 | number of reduced words of length n in coxeter group on {p1} generators s_i with relations (s_i)^{p2} = (s_i s_j)^{p3} = i | A162740, A166679, A168930, A169390, A170270 |
+|   3 |  1214 | duplicate of {A1} | A000858, A052285, A077277, A088649, A125214 |
+|   4 |   979 | primes congruent to {p1} mod {p2} | A045380, A142041, A142268, A142500, A142739 |
+|   5 |   967 | numerators of continued fraction convergents to sqrt({p1}) | A001077, A041390, A041776, A042162, A042548 |
+|   6 |   966 | continued fraction for sqrt({p1}) | A010121, A040197, A040390, A040583, A040776 |
+|   7 |   966 | denominators of continued fraction convergents to sqrt({p1}) | A001076, A041393, A041779, A042165, A042551 |
+|   8 |   960 | decimal expansion of {p1}/{p2} | A007450, A021235, A021450, A021659, A021875 |
+|   9 |   912 | partial sums of {A1} | A001461, A120768, A173492, A194236, A299265 |
+|  10 |   683 | positions of {p1} in {A1}; complement of {A2} | A020904, A189213, A284658, A285532, A287770 |
+|  11 |   615 | a(n) = ({p1}*n + {p2})^{p3} | A016759, A017018, A017207, A017358, A017512 |
+|  12 |   603 | first differences of {A1} | A005347, A108906, A159799, A217865, A282778 |
+|  13 |   580 | divisors of {p1} | A018251, A018368, A018484, A018600, A018716 |
+|  14 |   572 | a(n) = {A1}({A2}(n)) | A048244, A179840, A284910, A324386, A351233 |
+|  15 |   539 | erroneous version of {A1} | A000017, A045617, A081744, A121836, A232987 |
+|  16 |   516 | inverse of {p1}th cyclotomic polynomial | A007273, A014366, A014908, A015389, A015868 |
+|  17 |   480 | decimal expansion of {p1}th root of {p2} | A010767, A011082, A011179, A011296, A011400 |
+|  18 |   425 | decimal expansion of log_{p1} ({p2}) | A152675, A153615, A154193, A154802, A155532 |
+|  19 |   418 | inverse permutation to {A1} | A054426, A162502, A254052, A304741, A361641 |
+|  20 |   359 | number of nx{p1} {p2}..{p3} arrays with each element x equal to the number its horizontal and vertical neighbors equal to {p4},{p5},{p6},{p7},{p8} for x={p9},{p... | A195975, A196586, A196945, A197238, A197526 |
+|  21 |   341 | numbers n such that string {p1},{p2} occurs in the base {p3} representation of n but not of n+{p4} | A044433, A044509, A044583, A044662, A044731 |
+|  22 |   332 | positions of {p1} in {A1} | A057986, A190556, A191251, A287109, A287386 |
+|  23 |   322 | numerator of hermite(n, {p1}/{p2}) | A158811, A159515, A159707, A160064, A160280 |
+|  24 |   314 | partial sums of the number of active (on, black) cells in n-th stage of growth of {p1}-dimensional cellular automaton defined by "rule {p2}", based on the {p3}-... | A267829, A270620, A271287, A272541, A273306 |
+|  25 |   307 | first differences of number of active (on, black) cells in n-th stage of growth of {p1}-dimensional cellular automaton defined by "rule {p2}", based on the {p3}... | A268194, A270625, A271276, A272505, A273303 |
+|  26 |   298 | number of active (on, black) cells in n-th stage of growth of {p1}-dimensional cellular automaton defined by "rule {p2}", based on the {p3}-celled von neumann n... | A248860, A270329, A271195, A272423, A273270 |
+|  27 |   289 | row sums of triangle {A1} | A015735, A104448, A130183, A134465, A177394 |
+|  28 |   284 | number of active (on, black) cells at stage {p1}^n-{p2} of the {p3}-dimensional cellular automaton defined by "rule {p4}", based on the {p5}-celled von neumann... | A267268, A270466, A271254, A272420, A273247 |
+|  29 |   284 | numbers whose base-{p1} representation has the same nonzero number of {p2}'s and {p3}'s | A038350, A039331, A039387, A039443, A039499 |
+|  30 |   281 | column {p1} of triangle {A1} | A052309, A107882, A123308, A134091, A166903 |
+|  31 |   275 | numbers whose base-{p1} representation has the same number of {p2}'s and {p3}'s | A039000, A039055, A039110, A039165, A039220 |
+|  32 |   273 | expansion of {p1}/(({p2}-x^{p3})*({p4}-x^{p5})*({p6}-x^{p7})*({p8}-x^{p9})) | A008678, A029192, A029246, A029300, A029354 |
+|  33 |   271 | records in {A1} | A060306, A114110, A154799, A276705, A355901 |
+|  34 |   268 | binary representation of the x-axis, from the left edge to the origin, of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule {... | A272609, A279694, A281281, A282447, A283351 |
+|  35 |   267 | binary representation of the x-axis, from the origin to the right edge, of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule... | A273531, A279717, A281286, A282483, A283356 |
+|  36 |   263 | decimal representation of the x-axis, from the origin to the right edge, of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule... | A273911, A279723, A281311, A282493, A283353 |
+|  37 |   261 | decimal representation of the x-axis, from the left edge to the origin, of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule... | A273972, A279718, A281287, A282484, A283293 |
+|  38 |   258 | binary representation of the diagonal from the corner to the origin of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule {p2}... | A276540, A286638, A287626, A288365, A289577 |
+|  39 |   258 | binary representation of the diagonal from the origin to the corner of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule {p2}... | A284040, A286639, A287627, A288398, A289578 |
+|  40 |   254 | decimal representation of the diagonal from the origin to the corner of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule {p2... | A284042, A286671, A287713, A288404, A289765 |
+|  41 |   251 | decimal representation of the diagonal from the corner to the origin of the n-th stage of growth of the {p1}-dimensional cellular automaton defined by "rule {p2... | A284041, A286674, A287720, A288437, A289768 |
+|  42 |   249 | row sums of {A1} | A014622, A120459, A186431, A296665, A362307 |
+|  43 |   248 | numbers n such that string {p1},{p2} occurs in the base {p3} representation of n but not of n-{p4} | A044055, A044152, A044222, A044314, A044379 |
+|  44 |   243 | numbers k such that k and k^{p1} use only the digits {p2}, {p3}, {p4}, {p5} and {p6} | A136810, A136873, A136935, A137000, A137072 |
+|  45 |   229 | number of base {p1} circular n-digit numbers with adjacent digits differing by {p2} or less | A124697, A124951, A125350, A125396, A125441 |
+|  46 |   229 | number of nxnxn {p1}..{p2} triangular arrays with each element x equal to the number its neighbors equal to {p3},{p4},{p5},{p6},{p7},{p8},{p9} for x={p10},{p11}... | A195157, A197796, A197938, A198043, A203201 |
+|  47 |   228 | position of n-th {p1} in {A1} | A020907, A030501, A031028, A031083, A031270 |
+|  48 |   222 | a(n) = {A1}(n) - {A2}(n) | A055676, A139368, A233270, A283981, A344769 |
+|  49 |   218 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left element zero | A305518, A305910, A316118, A316306, A316549 |
+|  50 |   217 | numbers k such that {p1}*{p2}^k+{p3} is prime | A032353, A032403, A032481, A319487, A323028 |
+|  51 |   216 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element zero | A304304, A304593, A304889, A305085, A305336 |
+|  52 |   209 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element zero | A298189, A298326, A298499, A298624, A298773 |
+|  53 |   207 | number of (n+{p1}) x ({p2}+{p3}) {p4}..{p5} arrays with every {p6} x {p7} subblock having its diagonal sum differing from its antidiagonal sum by {p8} (constant... | A234162, A234327, A234495, A234677, A234820 |
+|  54 |   205 | expansion of {p1}/(({p2}-{p3}x)({p4}-{p5}x)({p6}-{p7}x)({p8}-{p9}x)) | A016091, A028033, A028077, A028122, A028167 |
+|  55 |   204 | triangle of coefficients of polynomials u(n,x) jointly generated with {A1}; see the formula section | A185045, A208612, A209154, A209747, A210227 |
+|  56 |   202 | a(n) = {A1}(n)/{p1} | A036826, A080484, A139481, A165013, A256030 |
+|  57 |   200 | complement of {A1} | A003247, A136492, A187335, A187904, A325422 |
+|  58 |   195 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left element zero | A298148, A299078, A299220, A299361, A299525 |
+|  59 |   190 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A149919, A150259, A150435, A150747, A150821 |
+|  60 |   190 | primes having only {{p1}, {p2}, {p3}, {p4}} as digits | A053580, A386048, A386086, A386124, A386162 |
+|  61 |   188 | a(n) = n^{p1} mod {p2} | A053879, A070469, A070508, A070588, A070648 |
+|  62 |   188 | triangle of coefficients of polynomials v(n,x) jointly generated with {A1}; see the formula section | A207615, A208760, A209416, A209760, A210550 |
+|  63 |   187 | number of {p1}xn {p2}..{p3} arrays avoiding {p4} {p5} {p6} and {p7} {p8} {p9} horizontally and {p10} {p11} {p12} and {p13} {p14} {p15} vertically | A207026, A207392, A207602, A207776, A207951 |
+|  64 |   183 | a(n) = {p1}*n + {p2} | A004767, A017365, A112414, A154519, A158310 |
+|  65 |   182 | number of nx{p1} {p2}..{p3} arrays avoiding {p4} {p5} {p6} and {p7} {p8} {p9} horizontally and {p10} {p11} {p12} and {p13} {p14} {p15} vertically | A207021, A207439, A207713, A207881, A208037 |
+|  66 |   181 | a(n) = {p1}^({p2}*n + {p3}) | A013710, A013754, A013796, A013837, A013875 |
+|  67 |   176 | numbers k such that ({p1}*{p2}^k - {p3})/{p4} is prime | A056718, A280942, A286177, A293033, A294631 |
+|  68 |   176 | primes in {A1} | A033563, A103385, A134071, A173769, A268520 |
+|  69 |   170 | multiplicity of highest weight (or singular) vectors associated with character chi_{p1} of monster module | A034389, A034427, A034471, A034512, A034549 |
+|  70 |   170 | number of n x n binary arrays symmetric under {p1} degree rotation with all ones connected only in a {p2}-{p3}-{p4} pattern in any orientation | A146177, A146435, A146680, A146877, A147237 |
+|  71 |   169 | numbers k such that ({p1}*{p2}^k + {p3})/{p4} is prime | A059528, A275525, A282809, A290956, A294569 |
+|  72 |   165 | numbers k such that {p1} and {p2} occur juxtaposed in the base-{p3} representation of k but not of k+{p4} | A043877, A043910, A043943, A043976, A044009 |
+|  73 |   164 | a(n) = {p1}^n mod {p2} | A001218, A036153, A070360, A070392, A070425 |
+|  74 |   164 | numbers k such that {p1} and {p2} occur juxtaposed in the base-{p3} representation of k but not of k-{p4} | A043097, A043129, A043161, A043193, A043225 |
+|  75 |   160 | numbers k such that {p1}*{p2}^k + {p3} is prime | A002253, A053363, A084125, A274678, A290473 |
+|  76 |   159 | numerator of euler(n, {p1}/{p2}) | A156182, A156374, A156777, A156975, A157380 |
+|  77 |   147 | number of (n+{p1}) x ({p2}+{p3}) {p4}..{p5} arrays with every {p6} x {p7} subblock having its diagonal sum differing from its antidiagonal sum by {p8}, with no... | A234875, A234916, A235019, A235093, A235195 |
+|  78 |   139 | a(n) = {p1}*n^{p2} - {p3}*n + {p4} | A027599, A156676, A157368, A157734, A185438 |
+|  79 |   138 | expansion of {p1}/(({p2}-x^{p3})*({p4}-x^{p5})*({p6}-x^{p7})) | A008622, A025818, A025845, A025872, A025899 |
+|  80 |   137 | fibonacci sequence beginning {p1}, {p2} | A022086, A022116, A022345, A022372, A022399 |
+|  81 |   135 | [ exp({p1}/{p2})*n! ] | A030818, A030847, A030879, A030914, A030946 |
+|  82 |   134 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with each {p6}x{p7} subblock having clockwise perimeter pattern {p8} {p9} or {p10} | A259889, A260068, A260279, A260540, A260974 |
+|  83 |   133 | number of base {p1} n-digit numbers with adjacent digits differing by {p2} or less | A126358, A126386, A126417, A126498, A126525 |
+|  84 |   131 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6}, {p7}, {p8}, {p9} or {p10} king-move adjacent elements, with upper left elemen... | A316803, A316924, A317039, A317157, A317371 |
+|  85 |   131 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A149923, A150252, A150407, A150615, A150806 |
+|  86 |   130 | row {p1} of {A1} | A058794, A122313, A122339, A130343, A135269 |
+|  87 |   128 | bisection of {A1} | A002286, A094157, A099997, A112047, A166095 |
+|  88 |   128 | number of binary strings of length n with equal numbers of {p1} and {p2} substrings | A164137, A164162, A164187, A164212, A164237 |
+|  89 |   126 | base {p1} digits are, in order, the first n terms of the periodic sequence with initial period {p2},{p3},{p4} | A033126, A037526, A037563, A037613, A037643 |
+|  90 |   126 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7}, {p8}, {p9} or {p10} king-move adjacent elements, with upper left element... | A299649, A299688, A299809, A299891, A300093 |
+|  91 |   125 | indices of records in {A1} | A087663, A287636, A338360, A357129, A374232 |
+|  92 |   125 | numbers that are congruent to {{p1}, {p2}, {p3}} mod {p4} | A008854, A047267, A047357, A047438, A047537 |
+|  93 |   124 | binary representation of the n-th iteration of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A260692, A266283, A266838, A267270, A267674 |
+|  94 |   123 | number of permutations of floor(i*{p1}/{p2}), i={p3}..n-{p4}, with all sums of {p5} adjacent terms unique | A147885, A152324, A152349, A152375, A152640 |
+|  95 |   122 | a(n) = {p1} written in base n | A094232, A095452, A095500, A095548, A095596 |
+|  96 |   122 | numbers that are congruent to {{p1}, {p2}, {p3}, {p4}} mod {p5} | A032769, A047313, A047401, A047482, A047558 |
+|  97 |   122 | {A1} * {A2} | A127332, A129236, A130298, A131254, A134308 |
+|  98 |   121 | number of permutations of {p1}..n containing the relative rank sequence { {p2} } at any spacing | A158423, A159092, A159116, A159140, A159164 |
+|  99 |   118 | indices of primes in sequence defined by a({p1}) = {p2}, a(n) = {p3}*a(n-{p4}) - {p5} for n > {p6} | A056251, A101064, A101524, A101713, A101840 |
+| 100 |   116 | signature permutation of a catalan automorphism: row {p1} of {A1} | A130381, A130932, A130955, A130996, A131149 |
+| 101 |   115 | expansion of {p1}/(({p2}-{p3}*x)*({p4}-{p5}*x)*({p6}-{p7}*x)*({p8}-{p9}*x)) | A016075, A025946, A025970, A025997, A028161 |
+| 102 |   115 | number of n x {p1} {p2}..{p3} arrays avoiding {p4} {p5} {p6} and {p7} {p8} {p9} horizontally and {p10} {p11} {p12} and {p13} {p14} {p15} vertically | A207020, A207364, A207584, A207877, A208141 |
+| 103 |   115 | primes of the form {p1}x^{p2}+{p3}xy+{p4}y^{p5} | A139828, A139883, A139944, A139996, A140041 |
+| 104 |   114 | a(n) = ({p1}*n)^{p2} | A016744, A016804, A016919, A017076, A017280 |
+| 105 |   114 | number of permutations of length n which avoid the patterns {p1}, {p2}, {p3} | A116711, A116744, A116767, A116792, A116816 |
+| 106 |   114 | number of {p1}*n x n {p2}..{p3} arrays with row sums {p4} and column sums {p5} | A172546, A172587, A172668, A172756, A172836 |
+| 107 |   114 | primes p such that x^{p1} = {p2} has a solution mod p | A040028, A040116, A040970, A049550, A049574 |
+| 108 |   113 | primes p such that x^{p1} = {p2} has no solution mod p | A040034, A040121, A040973, A059236, A059335 |
+| 109 |   113 | triangle read by rows giving successive states of cellular automaton generated by "rule {p1}" initiated with a single on (black) cell | A118102, A266282, A266840, A267272, A267679 |
+| 110 |   112 | numbers whose base-{p1} representation contains exactly {p2} {p3}'s and {p4} {p5}'s | A044977, A045031, A045085, A045150, A045227 |
+| 111 |   112 | numbers whose base-{p1} representation has exactly {p2} runs | A043569, A043591, A043613, A043635, A043657 |
+| 112 |   110 | number of n x {p1} {p2}..{p3} arrays with each element x equal to the number its horizontal and vertical neighbors equal to {p4},{p5},{p6},{p7},{p8} for x={p9},... | A195971, A196455, A196742, A196984, A197403 |
+| 113 |   110 | numbers having {p1} {p2}'s in base {p3} | A043322, A043383, A043440, A043471, A043500 |
+| 114 |   110 | numbers k such that {p1}*{p2}^k - {p3} is prime | A001770, A056725, A102740, A280018, A290577 |
+| 115 |   110 | record values in {A1} | A005211, A106531, A180040, A246347, A343718 |
+| 116 |   110 | triangle whose (i,j)-th entry is binomial(i,j)*{p1}^(i-j)*{p2}^j | A038210, A038244, A038271, A038293, A038315 |
+| 117 |   108 | a(n) = {p1}^n - n^{p2} | A024012, A024043, A024069, A024097, A024125 |
+| 118 |   108 | decimal representation of the n-th iteration of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A262860, A266382, A266873, A267274, A267678 |
+| 119 |   108 | numbers k such that {A1}(k) = {p1} | A026601, A030774, A171241, A332206, A361347 |
+| 120 |   107 | numbers k such that the k-th triangular number contains only digits {{p1},{p2},{p3}} | A119034, A119076, A119118, A119159, A119201 |
+| 121 |   106 | a(n) = {p1} written in base {p2} - n | A095437, A095479, A095521, A095563, A095605 |
+| 122 |   106 | numbers n such that {p1}*{p2}^n-{p3} is prime | A050537, A050571, A050617, A050862, A050900 |
+| 123 |   106 | triangular numbers composed of digits {{p1},{p2},{p3}} | A119033, A119075, A119117, A119160, A119202 |
+| 124 |   103 | positions of records in {A1} | A030712, A106172, A263926, A329051, A365342 |
+| 125 |   102 | where records occur in {A1} | A004778, A096868, A126098, A151767, A261467 |
+| 126 |   101 | a(n) = floor({p1}/n) | A033322, A033343, A033363, A033383, A033403 |
+| 127 |   101 | numbers that are congruent to {{p1}, {p2}} mod {p3} | A047204, A047280, A047398, A047615, A151977 |
+| 128 |   100 | number of {p1} x n {p2}..{p3} arrays avoiding {p4} {p5} {p6} and {p7} {p8} {p9} horizontally and {p10} {p11} {p12} and {p13} {p14} {p15} vertically | A207025, A207455, A207766, A208070, A208421 |
+| 129 |   100 | numbers k such that the continued fraction for sqrt(k) has period {p1} | A010337, A020361, A020381, A020401, A020421 |
+| 130 |    99 | a(n) = {p1}*n^{p2} + {p3} | A033562, A158482, A158591, A158665, A158768 |
+| 131 |    99 | continued fraction for log({p1}) | A016441, A016460, A016479, A016498, A016517 |
+| 132 |    99 | strong pseudoprimes to base {p1} | A001262, A020247, A020266, A020285, A020304 |
+| 133 |    98 | a(n) = {p1}*n - {p2} | A060747, A156845, A157609, A157858, A158330 |
+| 134 |    98 | decimal expansion of ({p1}+sqrt({p2}))/{p3} | A077451, A176107, A176516, A177270, A188658 |
+| 135 |    98 | primes that remain prime through {p1} iterations of function f(x) = {p2}x + {p3} | A023242, A023270, A023291, A023311, A023332 |
+| 136 |    98 | {p1}th cyclotomic polynomial | A010890, A011654, A016351, A016375, A016400 |
+| 137 |    97 | decimal expansion of cube root of {p1} | A002580, A010594, A010613, A010632, A010651 |
+| 138 |    97 | dimension of the space of weight n cuspidal newforms for gamma_{p1}( {p2} ) | A063276, A063295, A063315, A063334, A063353 |
+| 139 |    97 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6} or {p7} king-move adjacent elements, with upper left element zero | A303721, A303887, A304008, A304128, A304218 |
+| 140 |    97 | numbers k such that {p1}*k + {p2} is prime | A024894, A105679, A108594, A111367, A158573 |
+| 141 |    97 | pseudoprimes to base {p1} | A005935, A020151, A020170, A020189, A020208 |
+| 142 |    96 | binomial transform of {A1} | A033193, A084213, A126082, A138035, A176027 |
+| 143 |    96 | continued fraction for cube root of {p1} | A002945, A010252, A010271, A010290, A010309 |
+| 144 |    96 | egyptian fraction representation for the cube root of {p1} | A129702, A132498, A132517, A132536, A132555 |
+| 145 |    96 | number of n x n {p1}..{p2} arrays with row sums {p3} and column sums {p4} | A172534, A172627, A172735, A172859, A172921 |
+| 146 |    96 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6} or {p7} king-move adjacent elements, with upper left element zero | A297884, A297938, A297985, A298069, A298137 |
+| 147 |    96 | numbers k such that ({p1}^k - {p2}^k)/{p3} is prime | A082182, A128353, A377699, A385928, A391924 |
+| 148 |    94 | a(n) = {p1}*{p2}^n - {p3} | A033484, A156760, A198848, A277106, A305065 |
+| 149 |    94 | indices of primes in sequence defined by a({p1}) = {p2}, a(n) = {p3}*a(n-{p4}) + {p5} for n > {p6} | A056244, A101012, A101140, A101541, A101739 |
+| 150 |    94 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148113, A149192, A149286, A149669, A149718 |
+| 151 |    94 | primes having only {{p1}, {p2}, {p3}} as digits | A036953, A199349, A260271, A261184, A385779 |
+| 152 |    94 | start with {p1} and repeatedly reverse the digits and add {p2} to get the next term | A117230, A118152, A118220, A118528, A118615 |
+| 153 |    93 | decimal expansion of log({p1}) | A016627, A016647, A016666, A016684, A016703 |
+| 154 |    93 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), (-{p9}, {p10}... | A148569, A149336, A149407, A149490, A149783 |
+| 155 |    91 | expansion of {p1}/(({p2}-x)*({p3}-x^{p4})*({p5}-x^{p6})*({p7}-x^{p8})) | A008673, A029021, A029046, A029069, A029093 |
+| 156 |    91 | numbers k such that the least term in the periodic part of the continued fraction for sqrt(k) is {p1} | A031428, A031706, A031724, A031742, A031760 |
+| 157 |    91 | squares mod {p1} | A010375, A010393, A010411, A010429, A010447 |
+| 158 |    90 | base {p1} digits are, in order, the first n terms of the periodic sequence with initial period {p2},{p3},{p4},{p5} | A037677, A037707, A037733, A037755, A037777 |
+| 159 |    90 | expansion of {p1}/(({p2}-x)({p3}-{p4}x)({p5}-{p6}x)({p7}-{p8}x)) | A021054, A021354, A021694, A021884, A024438 |
+| 160 |    90 | nonsquares mod {p1} | A028726, A028744, A028762, A028780, A028798 |
+| 161 |    90 | numbers k such that string {p1},{p2} occurs in the base {p3} representation of k but not of k-{p4} | A044052, A044094, A044141, A044180, A044239 |
+| 162 |    90 | numbers k such that the continued fraction for sqrt(k) has even period and if the last term of the periodic part is deleted the central term is {p1} | A031509, A031527, A031545, A031563, A031581 |
+| 163 |    90 | numbers k such that the continued fraction for sqrt(k) has odd period and if the last term of the periodic part is deleted the {p1} central terms are both {p2} | A031599, A031617, A031635, A031653, A031671 |
+| 164 |    90 | numbers k such that the period of the continued fraction for sqrt(k) contains exactly {p1} ones | A031779, A031797, A031815, A031833, A031851 |
+| 165 |    89 | decimal expansion of square root of {p1} | A002163, A010479, A010496, A010514, A010532 |
+| 166 |    89 | decimal expansion of {p1}/sqrt({p2}) | A010503, A020783, A020801, A020819, A020840 |
+| 167 |    89 | number of n x n {p1}..{p2} arrays with each element x equal to the number of its horizontal and vertical neighbors equal to {p3},{p4},{p5},{p6},{p7} for x={p8},... | A195970, A196572, A196857, A197173, A197443 |
+| 168 |    89 | numbers k such that k and k^{p1} use only the digits {p2}, {p3}, {p4} and {p5} | A136809, A136902, A136973, A137030, A137087 |
+| 169 |    89 | primes with primitive root {p1} | A001122, A019350, A019367, A019384, A019401 |
+| 170 |    88 | a(n) is the largest number such that all of a(n)'s length-n substrings are distinct and divisible by {p1} | A093211, A093228, A093246, A093263, A093280 |
+| 171 |    88 | egyptian fraction representation of sqrt({p1}) ({A1}) using a greedy function | A248235, A248252, A248269, A248286, A248303 |
+| 172 |    88 | primes of the form {p1}x^{p2} + {p3}y^{p4} | A084865, A107146, A107171, A107194, A107218 |
+| 173 |    87 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6} or {p7} horizontally, vertically or antidiagonally adjacent elements, with upp... | A318010, A318039, A318078, A318217, A318421 |
+| 174 |    86 | numbers k such that {p1}^k + {p2} is prime | A049054, A090649, A156982, A219035, A248351 |
+| 175 |    85 | number of n x n binary arrays symmetric about main diagonal with all ones connected only in a {p1}-{p2}-{p3} pattern in any orientation | A146174, A146432, A146677, A146874, A147234 |
+| 176 |    85 | number of n x n binary arrays symmetric under horizontal reflection with all ones connected only in a {p1}-{p2}-{p3} pattern in any orientation | A146172, A146430, A146675, A146872, A147232 |
+| 177 |    85 | number of ways to place zero or more nonadjacent {p1},{p2} {p3},{p4} {p5},{p6} {p7},{p8} {p9},{p10} {p11},{p12} {p13},{p14} {p15},{p16} polyhexes in any orienta... | A155355, A155374, A155391, A155412, A155432 |
+| 178 |    84 | a(n) = {p1}^n + {p2}^n + {p3}^n | A001550, A074513, A074529, A074545, A074561 |
+| 179 |    84 | decimal expansion of tangent of {p1} degrees | A019900, A019917, A019934, A019951, A019968 |
+| 180 |    84 | number of n x n binary arrays symmetric about both diagonal and antidiagonal with all ones connected only in a {p1}-{p2}-{p3} pattern in any orientation | A146175, A146417, A146662, A146851, A147205 |
+| 181 |    84 | number of n x n binary arrays with all ones connected only in a {p1}-{p2}-{p3} pattern in any orientation | A146171, A146413, A146658, A146847, A147201 |
+| 182 |    84 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148511, A148640, A149157, A149291, A149341 |
+| 183 |    83 | a(n) = {p1}*n^{p2} - {p3} | A000466, A157919, A158551, A158628, A158683 |
+| 184 |    83 | primes of the form {p1}x^{p2}+{p3}y^{p4} | A107177, A139908, A139936, A139968, A140001 |
+| 185 |    82 | a(n) = {p1}*n^{p2} + {p3}*n + {p4} | A006222, A106648, A154515, A157506, A185669 |
+| 186 |    82 | number of n x n binary arrays symmetric under horizontal and vertical reflection with all ones connected only in a {p1}-{p2}-{p3} pattern in any orientation | A146173, A146415, A146660, A146841, A147187 |
+| 187 |    82 | sprague-grundy values for octal game .{p1} | A071426, A071448, A071482, A071508, A125920 |
+| 188 |    81 | a(n) = {A1}(n)/n | A061082, A078214, A084016, A112890, A242348 |
+| 189 |    81 | decimal expansion of sine of {p1} degrees | A019811, A019828, A019845, A019862, A019880 |
+| 190 |    81 | numbers k such that ({p1}^k + {p2}^k)/{p3} is prime | A082387, A128339, A227173, A381092, A389433 |
+| 191 |    81 | numbers k such that {p1}^k - {p2}^k is prime | A057468, A062587, A062608, A062633, A062651 |
+| 192 |    81 | numbers that are congruent to {{p1}, {p2}, {p3}, {p4}, {p5}} mod {p6} | A032796, A047326, A047427, A047501, A047561 |
+| 193 |    80 | t(n,k)=number of nxk {p1}..{p2} arrays with each element x equal to the number of its horizontal and vertical neighbors equal to {p3},{p4},{p5},{p6},{p7} for x=... | A196078, A196578, A196922, A197250, A197537 |
+| 194 |    79 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148111, A148929, A149198, A149310, A149693 |
+| 195 |    79 | primes arising in {A1} | A036977, A083757, A087353, A089758, A099677 |
+| 196 |    78 | number of n x n binary arrays symmetric about the diagonal and under {p1} degree rotation with all ones connected only in a {p2}-{p3}-{p4} pattern in any orient... | A146176, A146410, A146647, A146812, A147080 |
+| 197 |    77 | mckay-thompson series of class {p1}a for monster | A007253, A058505, A058600, A058658, A058709 |
+| 198 |    77 | number of binary strings of length n with no substrings equal to {p1} {p2} or {p3} | A164407, A164432, A164450, A164469, A164490 |
+| 199 |    77 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A149887, A149955, A150145, A150291, A150535 |
+| 200 |    77 | numbers that are the sum of {p1} fourth powers in exactly {p2} ways | A341892, A344730, A345816, A345831, A345846 |
+| 201 |    76 | number of {p1}xn {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7} or {p8} horizontally, diagonally or antidiagonally adjacent elements, with... | A302742, A302879, A302969, A303103, A303244 |
+| 202 |    75 | primes congruent to {{p1}, {p2}, {p3}} mod {p4} | A003625, A045374, A045423, A045463, A215211 |
+| 203 |    74 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7} or {p8} horizontally, diagonally or antidiagonally adjacent elements, with... | A302736, A302873, A302963, A303101, A303249 |
+| 204 |    74 | primes congruent to {{p1}, {p2}, {p3}, {p4}} mod {p5} | A042986, A045384, A045443, A215277, A215350 |
+| 205 |    74 | smallest k such that {p1}^k has exactly n {p2}'s in its decimal representation | A063115, A063560, A063584, A063601, A063617 |
+| 206 |    73 | intersection of {A1} and {A2} | A038160, A188533, A277726, A356053, A360397 |
+| 207 |    72 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6} or {p7} horizontally, diagonally or antidiagonally adjacent elements, with upper... | A302261, A302364, A302424, A302512, A302631 |
+| 208 |    72 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148038, A148683, A149298, A149375, A149688 |
+| 209 |    70 | a(n) = n^{p1}*(n^{p2} + {p3})/{p4} | A037270, A168196, A168527, A168665, A170787 |
+| 210 |    70 | decimal expansion of ({p1}+{p2}*sqrt({p3}))/{p4} | A156163, A159897, A161488, A176436, A177153 |
+| 211 |    70 | gaussian binomial coefficient [ n,{p1} ] for q = -{p2} | A015249, A015271, A015293, A015315, A015334 |
+| 212 |    70 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7} or {p8} horizontally, vertically or antidiagonally adjacent elements, with... | A300799, A300883, A300933, A300971, A301353 |
+| 213 |    70 | numbers that are the sum of {p1} fourth powers in {p2} or more ways | A341891, A344737, A345562, A345576, A345590 |
+| 214 |    69 | half the number of length n integer sequences with sum zero and sum of squares {p1} | A157534, A157547, A157560, A157573, A157586 |
+| 215 |    69 | inverse of {p1}rd cyclotomic polynomial | A014032, A014502, A015012, A015472, A015862 |
+| 216 |    69 | inverse of {p1}st cyclotomic polynomial | A014030, A014560, A015080, A015550, A015970 |
+| 217 |    69 | number of n x n {p1}..{p2} arrays avoiding {p3} {p4} {p5} and {p6} {p7} {p8} horizontally and {p9} {p10} {p11} and {p12} {p13} {p14} vertically | A207019, A207413, A207677, A207874, A208063 |
+| 218 |    68 | gaussian binomial coefficients [ n,{p1} ] for q = {p2} | A022196, A022209, A022222, A022235, A022248 |
+| 219 |    68 | numbers that are the sum of {p1} positive {p2}th powers | A003336, A003351, A003366, A003379, A004808 |
+| 220 |    68 | primes congruent to {{p1}, {p2}} mod {p3} | A003628, A045383, A045436, A045472, A215167 |
+| 221 |    67 | a(n) = {p1}*a(n-{p2}) - {p3}*a(n-{p4}) for n > {p5}; a({p6}) = {p7}, a({p8}) = {p9} | A152599, A163308, A163458, A164072, A164547 |
+| 222 |    67 | length of n-th run of digit {p1} in {A1} | A030336, A030380, A030421, A030597, A031242 |
+| 223 |    67 | number of ways to place zero or more nonadjacent {p1},{p2} {p3},{p4} {p5},{p6} {p7},{p8} {p9},{p10} {p11},{p12} polyhexes in any orientation on a planar nxnxn t... | A155248, A155261, A155274, A155287, A155300 |
+| 224 |    67 | numbers k such that {A1}(k) is prime | A033872, A109790, A136371, A293715, A342630 |
+| 225 |    66 | binomial coefficient c({p1}n,n-{p2}) | A004310, A004330, A004346, A004363, A004377 |
+| 226 |    66 | number of nonempty subsets of {{p1},{p2},...,n} in which exactly {p3}/{p4} of the elements are <= (n-{p5})/{p6} | A047171, A047184, A048009, A048022, A048035 |
+| 227 |    65 | number of {p1}*n x {p2} {p3}..{p4} arrays with row sums {p5} and column sums n | A172568, A172600, A172673, A172758, A172830 |
+| 228 |    65 | number of {p1}xn {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6} or {p7} horizontally, diagonally or antidiagonally adjacent elements, with upper... | A302266, A302371, A302430, A302518, A302640 |
+| 229 |    65 | t(n,k)=number of nxk {p1}..{p2} arrays avoiding {p3} {p4} {p5} and {p6} {p7} {p8} horizontally and {p9} {p10} {p11} and {p12} {p13} {p14} vertically | A207068, A207426, A207741, A207928, A208164 |
+| 230 |    64 | main diagonal of {A1} | A050315, A232471, A284273, A323216, A349263 |
+| 231 |    64 | numbers k such that {p1}^k - {p2} is prime | A014224, A059613, A177093, A219038, A271618 |
+| 232 |    64 | squares composed of digits {{p1},{p2},{p3}} | A027676, A053891, A053915, A053939, A053963 |
+| 233 |    63 | a(n) = ({p1}*n+{p2})^{p3} | A016756, A016784, A016893, A017109, A017223 |
+| 234 |    62 | gaussian binomial coefficient [ n,{p1} ] for q=-{p2} | A015273, A015369, A015384, A015401, A015421 |
+| 235 |    61 | mirror of the triangle {A1} | A193725, A193797, A193862, A193920, A193968 |
+| 236 |    61 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148107, A148400, A148454, A148480, A149045 |
+| 237 |    61 | number of {p1}..{p2} integer arrays v[{p3}..n] of length n with all autocorrelation values sum(i){v[i]*v[i-k]} distinct for k in {p4}..n-{p5} | A171276, A171288, A171300, A171313, A171325 |
+| 238 |    61 | numbers n such that number of runs in the base {p1} representation of n is congruent to {p2} mod {p3} | A043747, A043763, A043788, A043813, A043849 |
+| 239 |    61 | {A1}({A2}(n)) | A094513, A098549, A112977, A117924, A143693 |
+| 240 |    60 | a(n) = sum_{k={p1}..n-{p2}} t(n,k) * t(n,k+{p3}), with t given by {A1} | A026934, A026957, A026977, A026997, A027234 |
+| 241 |    60 | number of n x {p1} {p2}..{p3} arrays with row sums {p4} and column sums n | A172633, A172737, A172814, A172869, A172927 |
+| 242 |    60 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6} or {p7} horizontally, vertically or antidiagonally adjacent elements, with upper... | A300468, A300505, A300602, A300641, A300686 |
+| 243 |    60 | positions of {p1}'s in {A1} | A050679, A171951, A234807, A284795, A343880 |
+| 244 |    59 | column {p1} of {A1} | A048806, A112083, A285170, A287031, A287044 |
+| 245 |    59 | number of ({p1}+{p2})x(n+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock row and diagonal sum equal to {p8} {p9} {p10} {p11} or {p12} and every {p13}x{p14... | A252306, A252410, A252440, A252565, A252621 |
+| 246 |    58 | legendre symbol (n,{p1}) | A011582, A011593, A011604, A011615, A011626 |
+| 247 |    58 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), (-{p9}, {p10}... | A148156, A148352, A148736, A148954, A149401 |
+| 248 |    58 | numbers k such that k^{p1} contains only digits {{p2},{p3},{p4}} | A031153, A053898, A053920, A053942, A053964 |
+| 249 |    58 | numbers whose set of base-{p1} digits is {{p2},{p3}} | A032804, A032816, A032827, A032839, A032922 |
+| 250 |    58 | row {p1} of array in {A1} | A006239, A092972, A144496, A265081, A322767 |
+| 251 |    57 | a(n) = {A1}(n+{p1})/{A2}(n) | A058256, A078228, A083156, A088779, A203308 |
+| 252 |    57 | decimal expansion of log_{p1}({p2}) | A007524, A114493, A153458, A154294, A154912 |
+| 253 |    57 | lexicographically earliest infinite sequence such that a(i) = a(j) => {A1}(i) = {A2}(j) and {A3}(i) = {A4}(j), for all i, j >= {p1} | A300223, A336160, A336934, A361026, A372571 |
+| 254 |    57 | number of (n+{p1}) x ({p2}+{p3}) {p4}..{p5} arrays with each {p6} x {p7} subblock having clockwise perimeter pattern {p8} {p9} or {p10} | A259887, A260009, A260204, A260494, A261107 |
+| 255 |    57 | number of permutations of [n] avoiding {{p1}, {p2}, {p3}} | A294048, A294706, A294760, A294772, A294806 |
+| 256 |    57 | starting positions of strings of {p1} {p2}'s in the decimal expansion of pi | A050201, A050272, A083610, A083622, A083635 |
+| 257 |    56 | a(n) = {p1}*{p2}^n + {p3} | A083683, A199110, A199556, A199686, A277989 |
+| 258 |    56 | dirichlet inverse of {A1} | A120630, A346237, A353468, A359433, A378216 |
+| 259 |    56 | expansion of {p1}/(({p2}-{p3}x)({p4}-{p5}x)({p6}-{p7}x)) | A001240, A016320, A018208, A019672, A020343 |
+| 260 |    56 | number of partitions of n into parts {p1}k+{p2} and {p3}k+{p4} with at least {p5} part of each type | A035620, A035643, A035660, A035671, A035689 |
+| 261 |    56 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), ({p9}, {p10}... | A151053, A151098, A151140, A151182, A151202 |
+| 262 |    56 | numbers that are the sum of {p1} squares in {p2} or more ways | A344795, A344807, A345481, A345492, A345503 |
+| 263 |    55 | a bisection of {A1} | A099055, A117933, A142877, A163228, A238091 |
+| 264 |    55 | expansion of sqrt({p1}) in base {p2} | A004539, A004550, A004561, A004572, A004584 |
+| 265 |    55 | period {p1}: repeat [{p2}, {p3}, {p4}, {p5}, {p6}, {p7}] | A010885, A131027, A134977, A153990, A185273 |
+| 266 |    55 | permutation of natural numbers: a(n) = {A1}({A2}(n)) | A235485, A245706, A249823, A254054, A266645 |
+| 267 |    55 | primes p such that {p1} is not a square mod p | A038877, A038902, A038924, A038946, A038968 |
+| 268 |    55 | primes with {p1} as smallest positive primitive root | A061323, A061334, A061739, A114665, A114676 |
+| 269 |    54 | expansion of {p1}/(({p2}-{p3}*x)*({p4}-{p5}*x)*({p6}-{p7}*x)) | A016282, A016313, A018091, A019682, A020971 |
+| 270 |    54 | smallest nonempty set s containing prime divisors of {p1}k+{p2} for each k in s | A020576, A020589, A020602, A020614, A020624 |
+| 271 |    53 | binomial coefficients c({p1},n) | A010926, A017774, A017784, A017795, A017805 |
+| 272 |    53 | decimal expansion of log({p1}/{p2}) | A016578, A016588, A016598, A016608, A016618 |
+| 273 |    53 | expansion of (theta_{p1}(z)*theta_{p2}({p3}z)+theta_{p4}(z)*theta_{p5}({p6}z))^{p7} | A002653, A028591, A028607, A028624, A028646 |
+| 274 |    53 | number of (n+{p1}) x {p2} {p3}..{p4} matrices with each {p5} x {p6} subblock idempotent | A224544, A224556, A224572, A224622, A224675 |
+| 275 |    53 | number of n x n binary arrays symmetric under {p1} degree rotation with all ones connected only in a {p2}-{p3}-{p4}-{p5} pattern in any orientation | A146829, A147049, A147129, A147199, A147323 |
+| 276 |    53 | number of nx{p1} {p2}..{p3} arrays with each {p4} adjacent to {p5}, {p6} or {p7} king-move neighboring {p8}s | A296647, A296686, A296800, A296832, A296969 |
+| 277 |    53 | numbers with {p1} divisors | A030513, A030637, A137492, A175744, A175754 |
+| 278 |    53 | smallest m such that {A1}(m) = n | A064689, A116454, A132602, A208852, A256283 |
+| 279 |    52 | a(n) = {A1}(n) + {A2}(n) | A081293, A172048, A276783, A319806, A349389 |
+| 280 |    52 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148132, A148390, A148430, A148835, A148871 |
+| 281 |    52 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148041, A148389, A148696, A149349, A149405 |
+| 282 |    52 | numbers that are the sum of {p1} fifth powers in {p2} or more ways | A342685, A345607, A345617, A345627, A345640 |
+| 283 |    51 | binomial coefficients c(n,{p1}) | A000389, A017722, A017732, A017742, A017752 |
+| 284 |    51 | dimension of the space of weight {p1}n cusp forms for gamma_{p2}( {p3} ) | A063081, A063107, A063128, A063143, A063155 |
+| 285 |    51 | index of {p1}^n within the sequence of the numbers of the form {p2}^i*{p3}^j | A025692, A025705, A025716, A025726, A025737 |
+| 286 |    51 | inverse binomial transform of {A1} | A032347, A100443, A140360, A156096, A277043 |
+| 287 |    51 | inverse of {p1}nd cyclotomic polynomial | A014031, A014471, A015031, A015471, A015941 |
+| 288 |    51 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), ({p9}, -{p10}... | A150100, A150560, A150798, A150863, A150889 |
+| 289 |    51 | t(n,k)=number of nxk {p1}..{p2} arrays with every element unequal to {p3}, {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element z... | A305530, A305961, A316176, A316376, A316576 |
+| 290 |    50 | a(n) = {A1}(n) mod {p1} | A051065, A099076, A179475, A284575, A354107 |
+| 291 |    50 | fixed points of {A1} | A065197, A241912, A333762, A344848, A376299 |
+| 292 |    50 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), ({p9}, -{p10}... | A150171, A150568, A150816, A150874, A150991 |
+| 293 |    50 | permutation of nonnegative integers: a(n) = {A1}({A2}(n)) | A064273, A264966, A265352, A265364, A275958 |
+| 294 |    50 | primes p such that {p1}*p + {p2} is also prime | A007693, A023220, A023232, A051653, A155938 |
+| 295 |    50 | t(n,n-{p1}), array t as in {A1} | A038732, A038794, A047093, A047125, A054094 |
+| 296 |    49 | continued fraction for log({p1}/{p2}) | A016529, A016538, A016547, A016556, A016565 |
+| 297 |    49 | coordination sequence for lattice d*_{p1} (with edges defined by l_{p2} norm = {p3}) | A035471, A035611, A035805, A035814, A035823 |
+| 298 |    49 | expansion of {p1}/(({p2}-x)*({p3}-{p4}*x)*({p5}-{p6}*x)*({p7}-{p8}*x)) | A021029, A021144, A021374, A021834, A022454 |
+| 299 |    49 | nonnegative values x of solutions (x, y) to the diophantine equation x^{p1}+(x+{p2})^{p3} = y^{p4} | A101152, A122694, A129641, A130004, A130646 |
+| 300 |    49 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock having the sum of the absolute values of all {p8} edge and diagonal differences e... | A233869, A233938, A233979, A234079, A234089 |
+| 301 |    49 | numbers n such that {A1}(n) = {p1} | A034784, A137242, A161442, A161453, A221974 |
+| 302 |    48 | dimension of the space of weight {p1}n cuspidal newforms for gamma_{p2}( {p3} ) | A063195, A063204, A063214, A063223, A063233 |
+| 303 |    48 | discriminants of real quadratic fields with class number {p1} and related continued fraction period length of {p2} | A050950, A050959, A050968, A051969, A051978 |
+| 304 |    48 | log base {p1} (n) mod {p2} | A036163, A036172, A036181, A036190, A036199 |
+| 305 |    48 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock row and diagonal sum equal to {p8} {p9} {p10} {p11} or {p12} and every {p13}x{p14... | A252298, A252403, A252525, A252569, A252633 |
+| 306 |    48 | number of n x n {p1}..{p2} arrays with every element equal to {p3}, {p4}, {p5}, {p6} or {p7} king-move adjacent elements, with upper left element zero | A298188, A298331, A298502, A298630, A298776 |
+| 307 |    48 | number of partitions of n into parts {p1}k+{p2} or {p3}k+{p4} | A003106, A035381, A035429, A035438, A035455 |
+| 308 |    48 | number of reduced words of length n in the weyl group b_{p1} | A161696, A161858, A161899, A161976, A162168 |
+| 309 |    48 | number of {p1}xn {p2}..{p3} arrays with every {p4} horizontally, diagonally or antidiagonally adjacent to {p5}, {p6} or {p7} neighboring {p8}s | A297608, A297641, A297685, A297721, A297753 |
+| 310 |    48 | numbers that are the sum of {p1} fifth powers in exactly {p2} ways | A342686, A346284, A346333, A346343, A346353 |
+| 311 |    48 | primes of the form {p1}^k + {p2} | A057733, A104065, A144487, A176926, A228031 |
+| 312 |    48 | the arithmetic function u(n,{p1},{p2}) | A291040, A291367, A291428, A291467, A291476 |
+| 313 |    48 | totally multiplicative sequence with a(p) = {p1} | A165824, A165833, A165842, A165851, A165860 |
+| 314 |    47 | coordination sequence for a_{p1} lattice | A008383, A035839, A035848, A035857, A035866 |
+| 315 |    47 | coordination sequence for c_{p1} lattice | A019560, A035750, A035759, A035768, A035777 |
+| 316 |    47 | coordination sequence for d_{p1} lattice | A007900, A107508, A107517, A107526, A107535 |
+| 317 |    47 | coordination sequence for diamond structure d^+_{p1}. (edges defined by l_{p2} norm = {p3}.) | A035879, A035889, A035898, A035907, A035916 |
+| 318 |    47 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock row, column, diagonal and antidiagonal sum not equal to {p8} {p9} {p10} {p11} or... | A252134, A252199, A252265, A252319, A252453 |
+| 319 |    47 | number of n x n {p1}..{p2} arrays with every element equal to {p3}, {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element zero | A298147, A299083, A299222, A299360, A299515 |
+| 320 |    47 | number of nondecreasing integer sequences of length {p1} with sum zero and sum of absolute values {p2}n | A158138, A158147, A158156, A158165, A158174 |
+| 321 |    47 | number of reduced words of length n in the weyl group a_{p1} | A161436, A161465, A161521, A161636, A161653 |
+| 322 |    47 | number of reduced words of length n in the weyl group d_{p1} | A162207, A162300, A162364, A162378, A162402 |
+| 323 |    47 | primes of form x^{p1}+{p2}*y^{p3} | A033199, A033219, A033228, A033238, A033247 |
+| 324 |    47 | t(n,k)=number of nxk {p1}..{p2} arrays with every element unequal to {p3}, {p4}, {p5}, {p6} or {p7} king-move adjacent elements, with upper left element zero | A304310, A304597, A304926, A305097, A305340 |
+| 325 |    47 | theta series of (putative) extremal {p1}-modular even lattice in dimension {p2} | A034599, A034609, A034618, A034639, A034648 |
+| 326 |    46 | a(n) = ({p1}^n - {p2})/{p3} | A002450, A116970, A218725, A218734, A218744 |
+| 327 |    46 | a(n) = {A1}(n)^{p1} | A049503, A129967, A153147, A181763, A284494 |
+| 328 |    46 | a(n) = {p1}*n^{p2} | A001105, A064761, A174333, A219056, A244636 |
+| 329 |    46 | coordination sequence for {p1}-dimensional cubic lattice | A008413, A035709, A035718, A035727, A035736 |
+| 330 |    46 | divisors of {p1}^{p2} - {p3} | A003523, A003532, A003542, A003551, A109933 |
+| 331 |    46 | expansion of {p1}/(({p2}-x)({p3}-x^{p4})({p5}-x^{p6})({p7}-x^{p8})) | A029001, A029037, A029076, A029112, A029125 |
+| 332 |    46 | inverse of {A1} | A054239, A098551, A113004, A120236, A271862 |
+| 333 |    46 | number of nxn {p1}..{p2} arrays with every element unequal to {p3}, {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element zero | A305517, A305948, A316124, A316377, A316616 |
+| 334 |    46 | numbers k such that {p1}*{p2}^k-{p3} is prime | A050413, A050563, A050618, A050849, A050892 |
+| 335 |    46 | numbers that are the sum of {p1} cubes in exactly {p2} ways | A344804, A345775, A345785, A345795, A345804 |
+| 336 |    46 | primes p such that {p1} is a square mod p | A038874, A038915, A038933, A038951, A038969 |
+| 337 |    46 | square array a(n,k), n >= {p1}, k >= {p2}, read by antidiagonals downwards, where column k is the expansion of b(x)^k, where b(x) is the g.f. of {A1} | A379598, A381602, A384651, A384899, A384977 |
+| 338 |    45 | decimal expansion of sqrt({p1}) | A002194, A176445, A177035, A177839, A178230 |
+| 339 |    45 | mckay-thompson series of class {p1}a for the monster group | A007242, A058690, A096563, A112186, A112214 |
+| 340 |    45 | number of (n+{p1}) x {p2} {p3}..{p4} arrays with every {p5} x {p6} subblock summing to {p7} | A183624, A183636, A183647, A183658, A183669 |
+| 341 |    45 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock row and column sum equal to {p8} {p9} {p10} {p11} or {p12} and every {p13}x{p14}... | A252098, A252142, A252164, A252205, A252331 |
+| 342 |    45 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with no {p6}x{p7} subblock diagonal sum {p8} and no antidiagonal sum {p9} and no row sum {p10} and no column su... | A255084, A255097, A255147, A255778, A255791 |
+| 343 |    45 | number of (n+{p1})x{p2} {p3}..{p4} arrays with each {p5}x{p6} subblock having rows and columns in lexicographically nondecreasing order | A184566, A185428, A185471, A186092, A186177 |
+| 344 |    45 | number of divisors of {p1}*n-{p2} of form {p3}*k+{p4} | A359212, A359244, A359307, A363850, A363860 |
+| 345 |    45 | number of n x n arrays of squares of integers with every (n-{p1})x(n-{p2}) subblock summing to {p3} | A159356, A159370, A159388, A159410, A159430 |
+| 346 |    45 | numerator of bernoulli(n, -{p1}/{p2}) | A157781, A158088, A158701, A158995, A159306 |
+| 347 |    45 | primes without {{p1}, {p2}} as digits | A036962, A386323, A386332, A386341, A386350 |
+| 348 |    45 | sums of {p1} distinct powers of {p2} | A018900, A038452, A038467, A038476, A038485 |
+| 349 |    44 | in the sequence of prime numbers, replace all the '{p1}' digits with '{p2}' and vice versa | A171014, A171023, A171031, A171039, A171047 |
+| 350 |    44 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148014, A148163, A148673, A148768, A149232 |
+| 351 |    44 | number of {p1}*n x {p2} {p3}..{p4} arrays with row sums {p5} and column sums {p6}*n | A172593, A172677, A172711, A172781, A172840 |
+| 352 |    44 | numbers k such that k concatenated with k-{p1} gives the product of {p2} numbers which differ by {p3} | A116094, A116103, A116113, A116122, A116132 |
+| 353 |    44 | numbers that are the sum of at most {p1} nonzero {p2}th powers | A004831, A004839, A004858, A004877, A004885 |
+| 354 |    44 | numbers that are the sum of at most {p1} positive {p2}th powers | A004842, A004850, A004869, A004888, A004896 |
+| 355 |    44 | numbers that are the sum of {p1} cubes in {p2} or more ways | A345506, A345518, A345526, A345538, A345547 |
+| 356 |    44 | numbers whose base-{p1} representation contains exactly {p2} {p3}'s and no {p4}'s | A044975, A045033, A045100, A045165, A045225 |
+| 357 |    44 | numbers whose base-{p1} representation contains exactly {p2} {p3}'s and {p4} {p5} | A044976, A045034, A045101, A045166, A045226 |
+| 358 |    44 | numbers whose base-{p1} representation contains no {p2}'s and exactly {p3} {p4}'s | A044967, A045017, A045088, A045159, A045219 |
+| 359 |    44 | positive numbers y such that y^{p1} is of the form x^{p2}+(x+{p3})^{p4} with integer x | A155923, A157247, A159626, A159844, A160200 |
+| 360 |    44 | product t{p1}(q^d); d \| {p2}, where t{p3} = theta{p4}(q)/({p5}*q^({p6}/{p7})) | A033761, A033771, A033779, A033787, A033796 |
+| 361 |    44 | t(n,k)=number of nxk {p1}..{p2} arrays with every element equal to {p3}, {p4}, {p5}, {p6} or {p7} king-move adjacent elements, with upper left element zero | A298195, A298337, A298501, A298629, A298775 |
+| 362 |    43 | a(n) = n^{p1} + {p2} | A001093, A084377, A114949, A189833, A241848 |
+| 363 |    43 | a(n) = {p1}*{p2}^n-{p3} | A081655, A198687, A198763, A198797, A198963 |
+| 364 |    43 | a(n) is the number of rooted maps with n edges and {p1} faces on an orientable surface of genus {p2} | A287046, A288077, A288085, A288264, A288279 |
+| 365 |    43 | antidiagonal sums of {A1} | A124642, A306026, A353128, A366859, A375578 |
+| 366 |    43 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock row, column, diagonal and antidiagonal sum not equal to {p8} {p9} or {p10} | A252025, A252060, A252073, A252286, A252339 |
+| 367 |    43 | number of n x n arrays of squares of integers, symmetric about both diagonal and antidiagonal, with all rows summing to {p1} | A156430, A156452, A156469, A156487, A156504 |
+| 368 |    43 | number of n x n {p1}..{p2} arrays with every element unequal to {p3}, {p4}, {p5}, {p6} or {p7} king-move adjacent elements, with upper left element zero | A304303, A304545, A304769, A304953, A305176 |
+| 369 |    43 | number of partitions of n into parts not of the form {p1}k, {p2}k+{p3} or {p4}k-{p5}. also number of partitions with at most {p6} parts of size {p7} and differe... | A035943, A035961, A035975, A035987, A035998 |
+| 370 |    43 | numbers whose base-{p1} representation contains exactly {p2} {p3} and {p4} {p5}'s | A044972, A045022, A045093, A045163, A045223 |
+| 371 |    43 | primes that become a different prime under the mapping {p1} <=> {p2} | A180517, A180525, A180533, A180541, A180549 |
+| 372 |    42 | a(n) = ({p1}n+{p2})^{p3} | A016790, A016823, A016844, A016881, A017177 |
+| 373 |    42 | a(n) = {p1}*{p2}^n+{p3} | A199112, A199216, A199321, A199422, A199564 |
+| 374 |    42 | a(n) = {p1}^n - {p2}^n | A001047, A016185, A139740, A190540, A248216 |
+| 375 |    42 | decimal expansion of a constant related to {A1} | A237888, A239806, A246041, A253270, A258113 |
+| 376 |    42 | discriminants of imaginary quadratic fields with class number {p1} (negated) | A006203, A046006, A046014, A171724, A351671 |
+| 377 |    42 | expansion of g.f.: ({p1}+x)/({p2}-{p3}*x) | A003950, A170736, A170744, A170752, A170760 |
+| 378 |    42 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock row and column sum not equal to {p8} {p9} {p10} {p11} or {p12} and every {p13}x{p... | A252123, A252151, A252241, A252277, A252417 |
+| 379 |    42 | number of nx{p1} {p2}..{p3} arrays with every element value z a city block distance of exactly z from another element value z | A208957, A209056, A209213, A209364, A209474 |
+| 380 |    42 | {p1}-limiting word of the morphism {p2}->{p3}, {p4}-> {p5} | A284674, A285080, A285162, A285277, A285495 |
+| 381 |    41 | a(n) = {p1}^n + {p2} | A000051, A062395, A168415, A178676, A246139 |
+| 382 |    41 | in the number n, replace all (decimal) digits '{p1}' with '{p2}' and vice versa | A222210, A222221, A222230, A222238, A222246 |
+| 383 |    41 | number of (n+{p1})x{p2} binary arrays avoiding patterns {p3} and {p4} in rows, columns and nw-to-se diagonals | A202429, A202490, A202641, A202773, A202896 |
+| 384 |    41 | number of length n+{p1} {p2}..{p3} arrays with every {p4} consecutive terms having the maximum of some {p5} terms equal to the minimum of the remaining {p6} ter... | A249701, A250076, A250150, A250333, A250371 |
+| 385 |    41 | number of length {p1}+{p2} {p3}..n arrays with every {p4} consecutive terms having the maximum of some {p5} terms equal to the minimum of the remaining {p6} ter... | A249708, A250084, A250158, A250341, A250379 |
+| 386 |    41 | number of length {p1}+{p2} {p3}..n arrays with no {p4} consecutive terms having the maximum of any {p5} terms equal to the minimum of the remaining {p6} terms | A249845, A249885, A249963, A250018, A250064 |
+| 387 |    41 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, -{p8}), (-{p9}, -{p... | A148015, A148240, A148708, A148772, A149543 |
+| 388 |    41 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A151035, A151051, A151083, A151117, A151150 |
+| 389 |    41 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148284, A148317, A148455, A148648, A149404 |
+| 390 |    41 | number of {p1} x {p2} matrices with elements in {p3}..n with each row and each column in nondecreasing order. {p4},{p5},n can be permuted, see formula | A140901, A140909, A140917, A140926, A140934 |
+| 391 |    41 | numbers n such that {p1}*{p2}^n + {p3}*r_n + {p4} is prime, where r_n = {p5}...{p6} is the repunit ({A1}) of length n | A102954, A102980, A102996, A103036, A103077 |
+| 392 |    41 | principal diagonal of the convolution array {A1} | A213436, A213562, A213583, A213766, A213826 |
+| 393 |    41 | triangle read by rows, {A1} * {A2} | A127108, A140582, A152194, A156665, A158951 |
+| 394 |    40 | a(n) = n - {A1}(n) | A101788, A262906, A292601, A336647, A364253 |
+| 395 |    40 | aliquot sequence starting at {p1} | A008885, A014360, A143090, A143754, A143847 |
+| 396 |    40 | inverse permutation of {A1}; every positive integer occurs exactly {p1} | A194012, A194843, A194901, A194967, A195078 |
+| 397 |    40 | nearest integer to gamma(n + {p1}/{p2})/gamma({p3}/{p4}) | A020001, A020009, A020017, A020025, A020033 |
+| 398 |    40 | number of nx{p1} {p2}..{p3} arrays with every {p4} horizontally, diagonally or antidiagonally adjacent to {p5}, {p6} or {p7} neighboring {p8}s | A297602, A297635, A297679, A297716, A297757 |
+| 399 |    40 | numbers n such that {p1}*n + {p2} is prime | A037030, A105775, A108762, A111224, A158648 |
+| 400 |    40 | sequence {A1} in binary | A063672, A114397, A115798, A115814, A115830 |
+| 401 |    40 | total number of on (black) cells after n iterations of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A262867, A265429, A266594, A267047, A267452 |
+| 402 |    39 | ceiling of gamma(n+{p1}/{p2})/gamma({p3}/{p4}) | A020092, A020101, A020108, A020117, A020124 |
+| 403 |    39 | convolution of {A1} and {A2} | A023556, A023604, A101555, A274355, A360489 |
+| 404 |    39 | diagonal sums of number triangle {A1} | A104882, A108361, A110182, A122920, A176287 |
+| 405 |    39 | indices of primes in {A1} | A066269, A232543, A244930, A285217, A285224 |
+| 406 |    39 | n times n+{p1} gives the concatenation of {p2} numbers m and m-{p3} | A116225, A116234, A116245, A116252, A116263 |
+| 407 |    39 | number of (n+{p1})x{p2} binary arrays avoiding patterns {p3} and {p4} in rows and columns | A202095, A202371, A202399, A202599, A203085 |
+| 408 |    39 | number of n x n arrays of squares of integers, symmetric about main diagonal, with all rows summing to {p1} | A156434, A156453, A156470, A156486, A156505 |
+| 409 |    39 | numbers k such that {p1}*r_k + {p2} is prime, where r_k = {p3}...{p4} is the repunit ({A1}) of length k | A055520, A056662, A056682, A056693, A099411 |
+| 410 |    39 | numbers n such that {p1}*{p2}^n + {p3}*r_n - {p4} is prime, where r_n = {p5}...{p6} is the repunit ({A1}) of length n | A102958, A102994, A103020, A103038, A103079 |
+| 411 |    39 | period {p1}: repeat ({p2},{p3}) | A010674, A010688, A010699, A010707, A010720 |
+| 412 |    39 | primes for which -{p1} is a primitive root | A007348, A105880, A105889, A105896, A105904 |
+| 413 |    39 | t(n,k)=number of nxk {p1}..{p2} arrays with every element equal to {p3}, {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element zer... | A298154, A299097, A299249, A299366, A299521 |
+| 414 |    39 | trajectory of {p1} under map n->{p2}n+{p3} if n odd, n->n/{p4} if n even | A033962, A033969, A033976, A037103, A037111 |
+| 415 |    38 | a(n) = gcd({A1}(n), {A2}(n)) | A074641, A280702, A325975, A331290, A345061 |
+| 416 |    38 | a(n) = {A1}(n+{p1})/{p2} | A024728, A157524, A160419, A162775, A173459 |
+| 417 |    38 | binomial coefficient c({p1},n) | A010927, A010934, A010941, A010948, A010955 |
+| 418 |    38 | coordination sequence for b_{p1} lattice | A107546, A107553, A107560, A107567, A108002 |
+| 419 |    38 | difference sequence of {A1} | A022156, A284881, A325496, A325521, A325528 |
+| 420 |    38 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with each row and column divisible by {p6}, read as a base-{p7} number with top and left being the most signifi... | A263218, A263335, A263372, A263435, A263463 |
+| 421 |    38 | number of on (black) cells in the n-th iteration of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A265205, A266249, A266614, A266981, A267445 |
+| 422 |    38 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A149900, A150064, A150417, A150512, A150745 |
+| 423 |    38 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148109, A148203, A148459, A148960, A148992 |
+| 424 |    38 | permanent of the n-th principal submatrix of {A1} | A204233, A204249, A204264, A204430, A204444 |
+| 425 |    38 | total number of off (white) cells after n iterations of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A265220, A266074, A266440, A266795, A267262 |
+| 426 |    38 | {A1}(n)/{p1} | A007823, A129028, A192375, A226478, A261909 |
+| 427 |    37 | a(n) = {A1}(n) - n | A033550, A158511, A286548, A337341, A351646 |
+| 428 |    37 | a(n) = {p1}*n^{p2} + {p3}*n | A067705, A105374, A158056, A158309, A158396 |
+| 429 |    37 | base-{p1} palindromes that start with {p2} | A043001, A043008, A043015, A043022, A043030 |
+| 430 |    37 | expansion of {p1}/(({p2}-x^{p3})({p4}-x^{p5})({p6}-x^{p7})({p8}-x^{p9})) | A029138, A029416, A029423, A029430, A029438 |
+| 431 |    37 | hankel transform of {A1} | A121835, A138176, A166445, A168504, A186002 |
+| 432 |    37 | number of (n+{p1})x{p2} {p3}..{p4} arrays containing all values {p5}..{p6} with every {p7}x{p8} subblock having {p9} or {p10} distinct values, and new values {p... | A209963, A210009, A210169, A210179, A210306 |
+| 433 |    37 | number of (n+{p1})x{p2} {p3}..{p4} arrays with the permanents of all {p5}x{p6} subblocks equal and nonzero | A204711, A204756, A204785, A204835, A204873 |
+| 434 |    37 | number of n x n arrays of squares of integers summing to {p1} | A159355, A159383, A159401, A159415, A159429 |
+| 435 |    37 | number of n x n arrays of squares of integers summing to {p1} with every element equal to at least {p2} neighbor | A146089, A146347, A146506, A146519, A146547 |
+| 436 |    37 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6}, {p7}, {p8}, {p9}, {p10} or {p11} king-move adjacent elements, with upper left... | A317512, A317522, A317567, A317601, A317693 |
+| 437 |    37 | numbers k such that k concatenated with k+{p1} gives the product of {p2} numbers which differ by {p3} | A116163, A116173, A116182, A116195, A116207 |
+| 438 |    37 | numbers that are the sum of {p1} nonzero squares in exactly {p2} ways | A025285, A025292, A025327, A025361, A294736 |
+| 439 |    37 | primes congruent to {{p1}, {p2}, {p3}, {p4}, {p5}} mod {p6} | A042989, A045396, A215162, A215320, A215355 |
+| 440 |    36 | base-{p1} digits are, in order, the first n terms of the periodic sequence with initial period {p2},{p3},{p4} | A033121, A033132, A037496, A037525, A037545 |
+| 441 |    36 | decimal expansion of ratio-sum for {A1}; see comments | A296425, A296432, A296477, A296491, A296565 |
+| 442 |    36 | möbius transform of {A1} | A003966, A254520, A305806, A347115, A354185 |
+| 443 |    36 | n written in fractional base {p1}/{p2} | A024629, A024636, A024643, A024650, A024657 |
+| 444 |    36 | number of length n+{p1} {p2}..{p3} arrays with no {p4} consecutive terms having the maximum of any {p5} terms equal to the minimum of the remaining {p6} terms | A249838, A249878, A249956, A250011, A250057 |
+| 445 |    36 | number of nx{p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5} or {p6} horizontally, vertically or antidiagonally adjacent elements, with upper lef... | A317759, A317770, A317817, A317859, A317890 |
+| 446 |    36 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A149828, A150016, A150141, A150241, A150477 |
+| 447 |    36 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), (-{p9}, {p10}... | A148304, A148362, A148484, A148497, A149066 |
+| 448 |    36 | partial products of {A1} | A060193, A140701, A181335, A265125, A282165 |
+| 449 |    36 | positive numbers having the same set of digits in base {p1} and base {p2} | A033170, A037414, A037421, A037428, A037436 |
+| 450 |    36 | primes of the form {p1}n^{p2} + {p3} | A168487, A201480, A201600, A201607, A201706 |
+| 451 |    36 | weight distribution of [{p1},{p2},{p3}] primitive binary bch code | A083488, A151722, A151810, A151839, A151933 |
+| 452 |    35 | a(n) = {A1}(n) - {p1} | A026243, A099953, A136000, A166260, A295571 |
+| 453 |    35 | a(n) = {p1}*a(n-{p2}) - {p3}*a(n-{p4}), with a({p5})={p6}, a({p7})={p8} | A020698, A190962, A190969, A190977, A190984 |
+| 454 |    35 | column {p1} of triangle {A1}, also equals column {p2} of {A2}^{p3} | A113341, A113351, A113362, A113373, A113388 |
+| 455 |    35 | decimal expansion of gamma({p1}/{p2}) | A068465, A203138, A203145, A220609, A340721 |
+| 456 |    35 | fixed point of the morphism {p1}->{p2}, {p3}->{p4} | A096270, A189628, A189706, A284386, A285661 |
+| 457 |    35 | multiples of {p1} | A008586, A008597, A008604, A086746, A169825 |
+| 458 |    35 | number of (n+{p1})x{p2} {p3}..{p4} arrays with column and row pair sums b(i,j)=a(i,j)+a(i,j-{p5}) and c(i,j)=a(i,j)+a(i-{p6},j) nondecreasing in column and row... | A203665, A203724, A203737, A203868, A203943 |
+| 459 |    35 | number of (n+{p1})x{p2} {p3}..{p4} arrays with column and row pair sums b(i,j)=a(i,j)+a(i,j-{p5}) and c(i,j)=a(i,j)+a(i-{p6},j) such that rows of b(i,j) and col... | A203447, A203659, A203782, A203891, A203912 |
+| 460 |    35 | number of nx{p1} {p2}..{p3} arrays avoiding {p4} {p5} {p6} horizontally and {p7} {p8} {p9} vertically | A206780, A206870, A206887, A206991, A207085 |
+| 461 |    35 | number of permutations of floor(i*{p1}/{p2}), i={p3}..n-{p4}, with all sums of {p5} through {p6} adjacent terms respectively unique | A147900, A147907, A147914, A147938, A147945 |
+| 462 |    35 | number of permutations of {p1} indistinguishable copies of {p2}..n with exactly {p3} adjacent element pairs in decreasing order | A151624, A151631, A151638, A151645, A151652 |
+| 463 |    35 | number of ways to place zero or more nonadjacent {p1},{p2} {p3},{p4} {p5},{p6} {p7},{p8} {p9},{p10} {p11},{p12} {p13},{p14} polyhexes in any orientation on a pl... | A155315, A155322, A155331, A155341, A155348 |
+| 464 |    35 | numbers k such that k^{p1} + {p2} is prime | A000068, A049441, A113536, A114275, A125263 |
+| 465 |    35 | numbers k such that number of runs in the base {p1} representation of k is congruent to {p2} mod {p3} | A043768, A043822, A043830, A043838, A043855 |
+| 466 |    35 | primes that are the sum of {p1} consecutive primes | A034962, A215993, A216000, A216007, A216014 |
+| 467 |    34 | a(n) = n-{p1} | A023444, A023450, A023459, A023465, A023473 |
+| 468 |    34 | a(n) = {p1}*binomial({p2}*n+{p3},n)/({p4}*n+{p5}) | A118969, A233830, A234466, A234513, A234573 |
+| 469 |    34 | coefficients in expansion of (e_{p1}^{p2}/e_{p3}^{p4})^({p5}/{p6}) | A289365, A296652, A299696, A299859, A299949 |
+| 470 |    34 | decimal expansion of limiting power-ratio for {A1}; see comments | A296452, A296458, A296474, A296488, A296500 |
+| 471 |    34 | length of cycle mentioned in {A1} | A151958, A164999, A165022, A165057, A165081 |
+| 472 |    34 | n^{p1} mod {p2} | A070441, A070605, A070685, A070710, A070723 |
+| 473 |    34 | number of (n+{p1})x{p2} {p3}..{p4} matrices with each {p5}x{p6} subblock idempotent | A224570, A224583, A224591, A224601, A224631 |
+| 474 |    34 | number of n x {p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left element zer... | A305590, A305952, A306163, A316238, A316422 |
+| 475 |    34 | number of nx{p1} {p2}..{p3} arrays with every nonzero element less than or equal to at least {p4} horizontal and vertical neighbors | A202975, A203335, A203343, A203388, A203455 |
+| 476 |    34 | number of permutations of {p1} copies of {p2}..n with all adjacent differences <= {p3} in absolute value | A177282, A177288, A177294, A177300, A177306 |
+| 477 |    34 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, -{p8}), (-{p9}, -{p... | A149855, A149931, A150032, A150308, A150376 |
+| 478 |    34 | numbers whose base-{p1} and base-{p2} expansions have no digits in common | A037337, A037344, A037350, A037356, A037362 |
+| 479 |    34 | numbers whose base-{p1} and base-{p2} expansions have the same digit sum | A037301, A037309, A037315, A037321, A037327 |
+| 480 |    34 | polylogarithm li(-n,-{p1}/{p2}) multiplied by ({p3}^(n+{p4}))/{p5} | A210246, A213130, A213136, A213142, A213148 |
+| 481 |    34 | powers of {p1} | A009964, A009971, A009978, A009984, A009990 |
+| 482 |    34 | primes of the form {p1}n^{p2} - {p3} | A090686, A201782, A201789, A201850, A201856 |
+| 483 |    34 | primes with digit sum = {p1} | A106756, A106762, A106769, A106775, A106781 |
+| 484 |    34 | v(n+{p1})/v(n), where v={A1} | A202945, A203590, A203684, A203698, A203743 |
+| 485 |    33 | a(n) = ({A1}(n)-{p1})/{p2} | A088350, A095273, A151549, A166048, A251550 |
+| 486 |    33 | a(n) = {p1}*{p2}^n | A002023, A005010, A005052, A110288, A176413 |
+| 487 |    33 | expansion of product_{d \| {p1}} theta_{p2}(q^d) | A033722, A033734, A033740, A033746, A033752 |
+| 488 |    33 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays x(i,j) with row sums sum{j^{p6}*x(i,j), j={p7}..{p8}+{p9}} nondecreasing, and column sums sum{i^{p10}*x(i,j), i... | A232706, A232762, A232786, A232849, A232857 |
+| 489 |    33 | number of n x n {p1}..{p2} arrays with every element equal to {p3}, {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left element ze... | A299648, A299715, A299808, A299880, A300031 |
+| 490 |    33 | number of nx{p1} {p2}..{p3} arrays with each {p4} adjacent to {p5} or {p6} king-move neighboring {p7}s | A295777, A295846, A295981, A296035, A296125 |
+| 491 |    33 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148229, A148276, A149119, A149172, A149222 |
+| 492 |    33 | numbers k such that string {p1},{p2} occurs in the base {p3} representation of k but not of k+{p4} | A044450, A044560, A044641, A044647, A044796 |
+| 493 |    33 | numbers k such that the string {p1},{p2} occurs in the base {p3} representation of k but not of k-{p4} | A044098, A044286, A044299, A044313, A044328 |
+| 494 |    33 | numbers k such that {p1}*k^{p2} + {p3} is prime | A001912, A097697, A110967, A111149, A128829 |
+| 495 |    33 | numbers k that divide {p1}^k + {p2}^k | A045576, A045583, A045589, A045595, A045601 |
+| 496 |    33 | numbers whose base-{p1} representation has the same number of {p2}'s, {p3}'s and {p4}'s | A039559, A039566, A039572, A039578, A039584 |
+| 497 |    33 | triangle read by rows: {A1} * {A2} as infinite lower triangular matrices | A103994, A128306, A128623, A129501, A131035 |
+| 498 |    32 | a(n) = ({p1}/{p2})*{A1}(n) | A206802, A290907, A291039, A291390, A293726 |
+| 499 |    32 | a(n) = t({p1},n), array t given by {A1} | A036543, A047860, A048476, A048490, A048510 |
+| 500 |    32 | a(n) = {A1}(n) / {A2}(n) | A078205, A092505, A203510, A319993, A336848 |
+| 501 |    32 | a(n) = {p1}*n^{p2} - {p3}*n | A154376, A158058, A158224, A158329, A158398 |
+| 502 |    32 | a(n) = {p1}^n + {p2}^n | A007689, A074604, A074610, A074616, A074622 |
+| 503 |    32 | a(n)=(s(n)+{p1})/{p2}, where s(n)=n-th base {p3} palindrome that starts with {p4} | A043045, A043054, A043060, A043069, A043076 |
+| 504 |    32 | coefficients in expansion of dirichlet series product_p ({p1}-(kronecker(m,p)+{p2})*p^(-s)+kronecker(m,p)*p^(-{p3}s))^(-{p4}) for m = {p5} | A035186, A035194, A035201, A035210, A035217 |
+| 505 |    32 | first column of {A1} | A027507, A027546, A082819, A167199, A262042 |
+| 506 |    32 | monotonic ordering of nonnegative differences {p1}^i-{p2}^j, for {p3}>= i>={p4}, j>={p5} | A192123, A192152, A192159, A192167, A192195 |
+| 507 |    32 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with nondecreasing sum of every {p6} consecutive values in every row and column | A250426, A250437, A250594, A250862, A251187 |
+| 508 |    32 | number of (n+{p1})x{p2} {p3}..{p4} arrays with every {p5}x{p6} subblock having {p7} or {p8} distinct values, and new values {p9}..{p10} introduced in row major... | A209824, A209845, A210120, A210160, A210400 |
+| 509 |    32 | number of distinct solutions of sum{i={p1}..{p2}}(x({p3}i-{p4})*x({p5}i)) = {p6} (mod n), with x() only in {p7}..n-{p8} | A180774, A180780, A180789, A180817, A180826 |
+| 510 |    32 | number of n x n binary arrays symmetric under {p1} degree rotation with all ones connected only in a {p2}-{p3} pattern in any orientation | A146230, A146475, A146743, A147065, A147366 |
+| 511 |    32 | number of nonempty subsets of {{p1},{p2},...,n} in which exactly {p3}/{p4} of the elements are <= (n+{p5})/{p6} | A048038, A048045, A048073, A048079, A048085 |
+| 512 |    32 | number of nx{p1} {p2}..{p3} arrays with every nonzero element less than or equal to some horizontal or vertical neighbor | A202884, A202910, A203051, A203060, A203094 |
+| 513 |    32 | number of nx{p1} {p2}..{p3} arrays with every nonzero element less than or equal to some nw, e or s neighbor | A202983, A203257, A203273, A203394, A203503 |
+| 514 |    32 | number of nx{p1} {p2}..{p3} arrays with no element equal to {p4} plus the sum of elements to its left or {p5} plus the sum of elements above it or {p6} plus the... | A239360, A239997, A240337, A240361, A240423 |
+| 515 |    32 | number of nx{p1} {p2}..{p3} arrays with rows in nondecreasing lexicographic order and columns in nonincreasing lexicographic order, but with exactly {p4} mistak... | A278628, A278650, A278773, A278794, A278852 |
+| 516 |    32 | number of off (white) cells in the n-th iteration of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A265219, A266222, A266595, A266900, A267354 |
+| 517 |    32 | number of strings of length n over z_{p1} with trace {p2} and subtrace {p3} | A073963, A073969, A073975, A073981, A073987 |
+| 518 |    32 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), ({p9}, {p10},... | A150549, A150653, A150842, A150891, A150899 |
+| 519 |    32 | numbers having {p1} {p2} in base {p3} | A043321, A043381, A043433, A043461, A043489 |
+| 520 |    32 | numbers k such that {A1}(k) = {A2}(k) | A026222, A078327, A335878, A356081, A370493 |
+| 521 |    32 | numbers x such that {p1} < \|x^{p2} - y^{p3}\| < x^({p4}/{p5}) for some number y | A173348, A173354, A173360, A173366, A173372 |
+| 522 |    32 | period {p1}: repeat [{p2}, {p3}, {p4}, {p5}] | A011765, A131712, A133872, A147818, A167873 |
+| 523 |    32 | primes of the form {p1}n^{p2}+{p3} | A201108, A201114, A201172, A201179, A201264 |
+| 524 |    32 | t(n,k) is the number of (n+{p1}) x (k+{p2}) {p3}..{p4} arrays with every {p5} x {p6} subblock having its diagonal sum differing from its antidiagonal sum by {p7... | A234169, A234266, A234490, A234665, A234728 |
+| 525 |    32 | t(n,k)=number of nxk {p1}..{p2} arrays with every element equal to {p3}, {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left eleme... | A299654, A299721, A299814, A299893, A300040 |
+| 526 |    32 | the arithmetic function uhat(n,{p1},{p2}) | A291041, A291502, A291515, A291567, A291574 |
+| 527 |    31 | a(n) = (({p1}+sqrt({p2}))*({p3}+sqrt({p4}))^n + ({p5}-sqrt({p6}))*({p7}-sqrt({p8}))^n)/{p9} | A111566, A161947, A162273, A162769, A163064 |
+| 528 |    31 | a(n) = ({p1}*n+{p2})*({p3}*n+{p4}) | A001504, A001538, A033573, A085001, A146301 |
+| 529 |    31 | a(n) = ({p1}*{p2}^n - {p3})/{p4} | A020989, A096053, A198766, A199023, A246057 |
+| 530 |    31 | a(n) = {A1}(n) * {A2}(n) | A094070, A143231, A239226, A331291, A345048 |
+| 531 |    31 | a(n) = {p1}*a(n-{p2}) for n > {p3}; a({p4}) = {p5}, a({p6}) = {p7} | A162255, A162962, A163888, A164640, A164737 |
+| 532 |    31 | decimal expansion of ({p1}/{p2}) * exp({p3}*pi/{p4}) * pi^({p5}/{p6}) * {p7}^({p8}/{p9}) / gamma({p10}/{p11})^{p12} | A388090, A388213, A388219, A388226, A388588 |
+| 533 |    31 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7}, {p8}, {p9}, {p10} or {p11} king-move adjacent elements, with upper left e... | A300177, A300207, A300258, A300310, A300318 |
+| 534 |    31 | number of nx{p1} {p2}..{p3} arrays with every row and column running average nondecreasing rightwards and downwards, and the number of instances of each value w... | A200770, A200776, A200900, A200934, A201103 |
+| 535 |    31 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, -{p1... | A148056, A148279, A148922, A149105, A149585 |
+| 536 |    31 | number of {p1}xn {p2}..{p3} arrays with every element equal to {p4}, {p5} or {p6} horizontally or antidiagonally adjacent elements, with upper left element zero | A301842, A301885, A301907, A301953, A301968 |
+| 537 |    31 | number of {p1}xn {p2}..{p3} arrays with every {p4} horizontally, diagonally or antidiagonally adjacent to {p5} or {p6} neighboring {p7}s | A297460, A297511, A297525, A297585, A297599 |
+| 538 |    31 | numbers m such that {A1}(m) = {p1} | A084116, A119025, A137674, A192489, A238247 |
+| 539 |    31 | positions of {p1}'s in {{A1}(n) : n > {p2}} | A327175, A327184, A327209, A327254, A327301 |
+| 540 |    31 | primes of the form x^{p1} + {p2}*y^{p3} | A033201, A139645, A139651, A139658, A139664 |
+| 541 |    31 | primes p such that x^{p1} = -{p2} has a solution mod p | A051071, A051077, A051083, A051089, A051095 |
+| 542 |    31 | primes p such that x^{p1} = -{p2} has no solution mod p | A216690, A216739, A216745, A216751, A216771 |
+| 543 |    31 | primes whose base-{p1} representation also is the base-{p2} representation of a prime | A235265, A235467, A235475, A235616, A235622 |
+| 544 |    31 | square array a(n,k), n >= {p1}, k >= {p2}, read by antidiagonals downwards, where column k is the expansion of e.g.f. b(x)^k, where b(x) is the e.g.f. of {A1} | A379168, A384722, A384761, A384811, A384985 |
+| 545 |    31 | transpose of square array {A1} | A246273, A262899, A276619, A278493, A285731 |
+| 546 |    31 | weight distribution of [{p1},{p2},{p3}] extended binary primitive bch (or xbch) code | A030639, A147635, A151559, A151618, A151660 |
+| 547 |    31 | {p1}-limiting word of the mapping {p2}->{p3}, {p4}->{p5}, starting with {p6} | A287372, A288223, A288524, A288707, A288741 |
+| 548 |    30 | bell numbers ({A1}) read mod {p1} | A146093, A146099, A146105, A146111, A146117 |
+| 549 |    30 | decimal expansion of a constant related to the asymptotics of {A1} | A270047, A306398, A323720, A344388, A366072 |
+| 550 |    30 | expansion of x/({p1} - {p2}*x - {p3}*x^{p4}) | A015529, A015545, A015559, A015570, A015580 |
+| 551 |    30 | exponent of {p1} (value of i) in n-th number of form {p2}^i*{p3}^j | A022332, A025640, A025647, A025654, A025669 |
+| 552 |    30 | exponent of {p1} (value of j) in n-th number of form {p2}^i*{p3}^j | A022333, A025658, A025668, A025679, A025686 |
+| 553 |    30 | fixed point of the mapping {p1}->{p2}, {p3}->{p4}, starting with {p5} | A284932, A287125, A288203, A288377, A288596 |
+| 554 |    30 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock having the sum of the absolute values of the edge differences equal to {p8} | A233629, A233750, A233945, A234340, A234404 |
+| 555 |    30 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock having the sum of the squares of all {p8} edge and diagonal differences equal to... | A233786, A233815, A233856, A233881, A233902 |
+| 556 |    30 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock having the sum of the squares of the edge differences equal to {p8} | A233639, A233648, A233660, A233677, A233716 |
+| 557 |    30 | number of (n+{p1})x{p2} binary arrays with no more than {p3} of any consecutive {p4} bits set in any row or column | A202415, A202465, A202568, A202719, A203042 |
+| 558 |    30 | number of compositions of {p1}*n-{p2} into parts {p3} and {p4} | A369837, A369846, A373302, A373933, A373959 |
+| 559 |    30 | number of nx{p1} {p2}..{p3} arrays with rows and columns in lexicographic nondecreasing order but with exactly {p4} mistakes | A278320, A278367, A278381, A278411, A278551 |
+| 560 |    30 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, -{p8}), (-{p9}, {p1... | A151046, A151091, A151118, A151152, A151209 |
+| 561 |    30 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A149921, A149981, A150311, A150682, A150698 |
+| 562 |    30 | numbers k such that ({p1}^k - {p2})/{p3} is prime | A004061, A006033, A127995, A128005, A293272 |
+| 563 |    30 | numbers k such that {p1}*{p2}^k + {p3}*r_k - {p4} is prime, where r_k = {p5}...{p6} is the repunit ({A1}) of length k | A098930, A102961, A103013, A103060, A103083 |
+| 564 |    30 | numbers missing from {A1} | A038162, A244018, A317107, A317468, A317917 |
+| 565 |    30 | numbers n such that n divides the (right) concatenation of all numbers <= n written in base {p1} (most significant digit on right) | A029496, A029503, A029509, A029516, A061938 |
+| 566 |    30 | numbers that are congruent to {{p1}, {p2}, {p3}, {p4}, {p5}, {p6}} mod {p7} | A032775, A047422, A047503, A047549, A047581 |
+| 567 |    30 | primes of the form {p1}n^{p2}-{p3} | A155702, A200913, A200951, A200959, A201034 |
+| 568 |    30 | sprague-grundy values for octal games .{p1} and .{p2} | A071432, A071469, A071475, A071481, A071503 |
+| 569 |    30 | t(n,k)=number of nxk {p1}..{p2} arrays with every element unequal to {p3}, {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left ele... | A316808, A316953, A317065, A317215, A317376 |
+| 570 |    30 | the arithmetic function v_{p1}(n,{p2}) | A289186, A289439, A290980, A291270, A291306 |
+| 571 |    29 | a nonsense sequence | A088590, A089689, A105242, A122577, A139336 |
+| 572 |    29 | a(n) = floor({p1}^n/{p2}^n) | A091946, A094974, A094980, A094985, A094990 |
+| 573 |    29 | a(n) = {A1}(n+{p1}) - {A2}(n) | A073274, A085241, A112261, A140514, A186883 |
+| 574 |    29 | a(n) = {A1}(n, {p1}n-{p2}) | A027056, A027063, A027089, A027094, A027120 |
+| 575 |    29 | a(n) = {A1}({p1}^n) | A059360, A095900, A164364, A254120, A346996 |
+| 576 |    29 | a(n) = {A1}({p1}n+{p2}) | A047755, A086362, A169739, A228692, A291089 |
+| 577 |    29 | a(n) = {p1}-n | A022959, A022964, A022969, A022974, A022980 |
+| 578 |    29 | a(n) = {p1}^n + {p2}^n - {p3} | A005056, A103456, A155602, A155617, A155636 |
+| 579 |    29 | a(n) = {p1}^n - {p2} | A000918, A024062, A058481, A164785, A173833 |
+| 580 |    29 | beatty sequence for ({p1}+sqrt({p2}))/{p3} | A080081, A329828, A329833, A329838, A329844 |
+| 581 |    29 | binary representation of the middle column of the "rule {p1}" elementary cellular automaton starting with a single on (black) cell | A259661, A266071, A266612, A266896, A267366 |
+| 582 |    29 | incorrect version of {A1} | A013549, A066029, A086196, A105807, A134330 |
+| 583 |    29 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with each row and column divisible by {p6}, read as a binary number with top and left being the most significan... | A262237, A262271, A262316, A262334, A262453 |
+| 584 |    29 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock having the absolute values of all {p8} edge and diagonal differences no larger th... | A234030, A234119, A234128, A234158, A234180 |
+| 585 |    29 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock having the sum of the squares of the edge differences equal to {p8}, and no {p9}... | A233685, A233886, A233891, A233915, A233955 |
+| 586 |    29 | number of cycles in range [{A1}(n-{p1})..{A2}(n-{p2})] of permutation {A3}/{A4} | A057507, A089411, A089426, A089872, A126291 |
+| 587 |    29 | number of n x {p1} {p2}..{p3} arrays with every element unequal to {p4}, {p5}, {p6}, {p7} or {p8} king-move adjacent elements, with upper left element zero | A304305, A304546, A304695, A304951, A305178 |
+| 588 |    29 | number of nx{p1} {p2}..{p3} arrays with every row and column running average nondecreasing rightwards and downwards | A200529, A200708, A200828, A200854, A200969 |
+| 589 |    29 | numbers having period-{p1} {p2}-digitized sequences | A031179, A031185, A031191, A031197, A031203 |
+| 590 |    29 | numbers k such that k*(k+{p1}) gives the concatenation of {p2} numbers m and m+{p3} | A116294, A116304, A116314, A116326, A116343 |
+| 591 |    29 | sequence defined by the recurrence formula a(n+{p1})=sum(a(p)*a(n-p)+k,p={p2}..n)+l for n>={p3}, with here a({p4})={p5}, a({p6})={p7}, k={p8} and l=-{p9} | A176675, A176753, A176759, A177163, A177169 |
+| 592 |    29 | {A1} indexed by {A2} | A087437, A088416, A089529, A090161, A091181 |
+| 593 |    28 | (terms in {A1})/{p1} | A051134, A051425, A051433, A051457, A051471 |
+| 594 |    28 | ({A1})/{p1} | A189783, A192070, A192524, A194403, A209983 |
+| 595 |    28 | a(n) is the least k such that {A1}(k) = n | A030780, A298474, A332306, A341194, A349282 |
+| 596 |    28 | a(n)=(# {p1}'s)-(# {p2}'s) in first n terms of {A1} | A030340, A030398, A030581, A030617, A031249 |
+| 597 |    28 | decimal expansion of pi^{p1}/{p2} | A072691, A111003, A182448, A197110, A257134 |
+| 598 |    28 | mckay-thompson series of class {p1}a for the monster group with a({p2}) = {p3} | A007240, A034319, A131123, A134785, A153765 |
+| 599 |    28 | number of (n+{p1}) x {p2} {p3}..{p4} arrays with every {p5} x {p6} or {p7} x {p8} subblock having exactly {p9} counterclockwise and {p10} clockwise edge increas... | A206087, A206092, A206114, A206131, A206136 |
+| 600 |    28 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with every {p6}x{p7} subblock summing to a prime | A251404, A251453, A251469, A251509, A251562 |
+| 601 |    28 | number of elements of gf({p1}^n) with trace {p2} and subtrace {p3} | A038518, A074001, A074006, A074011, A074016 |
+| 602 |    28 | number of integer solutions to a^{p1} + {p2}*b^{p3} + {p4}*c^{p5} + {p6}*d^{p7} = n | A236924, A320149, A320163, A320189, A320195 |
+| 603 |    28 | number of nxn {p1}..{p2} arrays with every element unequal to {p3}, {p4}, {p5}, {p6}, {p7}, {p8} or {p9} king-move adjacent elements, with upper left element ze... | A316802, A316919, A317037, A317147, A317232 |
+| 604 |    28 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7}, {p8} or {p9} horizontally, diagonally or antidiagonally adjacent elements... | A303417, A303452, A303465, A303509, A303521 |
+| 605 |    28 | number of oriented polyominoes in the {{p1},{p2}} tessellation of the hyperbolic plane | A395867, A395872, A395877, A395882, A395887 |
+| 606 |    28 | number of permutations of {p1} indistinguishable copies of {p2}..n arranged in a circle with exactly {p3} adjacent element pairs in decreasing order | A151583, A151588, A151593, A151598, A151603 |
+| 607 |    28 | number of prime pairs below {p1}^n having a difference of {p2} | A093737, A093743, A093748, A093972, A093977 |
+| 608 |    28 | number of {p1}*n x {p2}*n {p3}..{p4} arrays with row sums {p5} and column sums {p6} | A172573, A172595, A172674, A172700, A172779 |
+| 609 |    28 | number of {p1}..{p2} colorings of a {p3}x(n+{p4}) array circular in the n+{p5} direction with new values {p6}..{p7} introduced in row major order | A214102, A214114, A214146, A214173, A214193 |
+| 610 |    28 | number of {p1}xn {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7}, {p8} or {p9} horizontally, diagonally or antidiagonally adjacent elements... | A303422, A303458, A303472, A303516, A303528 |
+| 611 |    28 | numbers k such that ({p1}^k + {p2})/{p3} is prime | A007658, A185240, A236167, A284285, A309411 |
+| 612 |    28 | numbers k such that k prefixed by '{p1}' and followed by '{p2}' is prime | A032702, A032707, A032712, A032717, A032724 |
+| 613 |    28 | numbers of the form {p1}^j + {p2}^k, for j and k >= {p3} | A004050, A226810, A226815, A226820, A226825 |
+| 614 |    28 | positions of zeros in {A1} | A065348, A165480, A165602, A219657, A346256 |
+| 615 |    28 | primes congruent to {p1} or {p2} mod {p3} | A122870, A140536, A140587, A140655, A140742 |
+| 616 |    28 | ramanujan numbers ({A1}) read mod {p1} | A126812, A126817, A126822, A126827, A126832 |
+| 617 |    28 | row sums of number triangle {A1} | A105595, A110181, A114006, A120109, A124818 |
+| 618 |    28 | sum of {A1} and its dirichlet inverse | A323882, A345065, A346478, A349342, A353419 |
+| 619 |    28 | t(n,k)=number of (n+{p1})x(k+{p2}) {p3}..{p4} arrays with each {p5}x{p6} subblock having clockwise perimeter pattern {p7} {p8} or {p9} | A259894, A260070, A260248, A260501, A260927 |
+| 620 |    28 | theta series of d_{p1} lattice | A005930, A008432, A022046, A022051, A022056 |
+| 621 |    27 | a(n) = gcd(n, {A1}(n)) | A060654, A179930, A324873, A345941, A356158 |
+| 622 |    27 | a(n) = position of n in {A1} | A026137, A026237, A050009, A050113, A169844 |
+| 623 |    27 | a(n) = sum_{k={p1}..{p2}n-{p3}} t(n,k) * t(n,k+{p4}), with t given by {A1} | A027047, A027081, A027142, A027263, A027270 |
+| 624 |    27 | a(n) = {A1}(n)/{A2}(n) | A045948, A129365, A203517, A238691, A307107 |
+| 625 |    27 | a(n) = {p1}*a(n-{p2}) + {p3}*a(n-{p4}), with a({p5})={p6}, a({p7})={p8} | A007483, A072264, A122117, A190331, A190953 |
+| 626 |    27 | a(n+{p1}) = a(n) converted to base {p2} from base {p3} (written in base {p4}) | A023362, A023368, A023374, A023380, A023385 |
+| 627 |    27 | coefficients in asymptotic expansion of sequence {A1} | A116603, A256168, A260879, A260957, A293264 |
+| 628 |    27 | decimal expansion of ({p1}/{p2}) * exp({p3}*pi/{p4}) * {p5}^({p6}/{p7}) | A388247, A388255, A388310, A388316, A388491 |
+| 629 |    27 | euclid-mullin sequence ({A1}) with initial value a({p1})={p2} instead of a({p3})={p4} | A051308, A051313, A051318, A051323, A051328 |
+| 630 |    27 | expansion of product_{m>={p1}} ({p2}+q^m)^(-{p3}) | A022598, A022604, A022610, A022615, A022621 |
+| 631 |    27 | expansion of {p1}/(({p2}-{p3}*x)*({p4}-{p5}*x)) | A016129, A016138, A016162, A016170, A016184 |
+| 632 |    27 | integers in (-{p1}+{A1})/{p2}; contains {A2} as a proper subsequence | A190848, A190859, A191183, A191196, A191201 |
+| 633 |    27 | inverse permutation to sequence {A1} | A101283, A114862, A118316, A119628, A122281 |
+| 634 |    27 | mckay-thompson series of class {p1}b for monster | A007255, A058509, A058568, A058641, A058686 |
+| 635 |    27 | mckay-thompson series of class {p1}b for the monster group | A007244, A052240, A058601, A112146, A112173 |
+| 636 |    27 | n times n+{p1} gives the concatenation of {p2} numbers m and m+{p3} | A116298, A116306, A116319, A116328, A116338 |
+| 637 |    27 | number of ({p1}+{p2})x(n+{p3}) {p4}..{p5} arrays with each row divisible by {p6} and column not divisible by {p7}, read as a binary number with top and left bei... | A262423, A262797, A262802, A262851, A263126 |
+| 638 |    27 | number of n x n binary arrays symmetric about both diagonal and antidiagonal with all ones connected only in a {p1}-{p2}-{p3}-{p4} pattern in any orientation | A146827, A147047, A147127, A147197, A147322 |
+| 639 |    27 | number of n x n binary arrays symmetric about main diagonal with all ones connected only in a {p1}-{p2}-{p3}-{p4} pattern in any orientation | A146826, A147046, A147126, A147196, A147321 |
+| 640 |    27 | number of n x n binary arrays symmetric under horizontal reflection with all ones connected only in a {p1}-{p2}-{p3}-{p4} pattern in any orientation | A146824, A147044, A147124, A147194, A147319 |
+| 641 |    27 | number of n x n binary arrays with all ones connected only in a {p1}-{p2}-{p3}-{p4} pattern in any orientation | A146823, A147043, A147123, A147193, A147318 |
+| 642 |    27 | number of nx{p1} {p2}..{p3} arrays with every element equal to {p4}, {p5}, {p6}, {p7}, {p8} or {p9} horizontally, vertically or antidiagonally adjacent elements... | A301402, A301439, A301446, A301487, A301495 |
+| 643 |    27 | number of permutations of {p1}..n with i-{p2}<=p(i)<=i+{p3} | A179340, A179346, A179351, A179356, A179361 |
+| 644 |    27 | number of positive integers <= {p1}^n of form {p2} x^{p3} + {p4} y^{p5} | A000286, A054163, A054169, A054177, A054186 |
+| 645 |    27 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, {p7}, {p8}), ({p9}, -{p10}... | A150108, A150204, A150420, A150519, A150583 |
+| 646 |    27 | numbers k such that {p1}*{p2}^k + {p3}*r_k + {p4} is prime, where r_k = {p5}...{p6} is the repunit ({A1}) of length k | A097402, A102970, A103000, A103053, A103065 |
+| 647 |    27 | numbers that are the sum of {p1} distinct nonzero squares in exactly {p2} ways | A025303, A025308, A025341, A025346, A025379 |
+| 648 |    27 | numbers with exactly {p1} distinct base-{p2} digits | A031948, A031953, A031958, A031964, A031969 |
+| 649 |    27 | positive numbers k such that k and {p1}*k are anagrams in base {p2} (written in base {p3}) | A023059, A023064, A023069, A023074, A023079 |
+| 650 |    27 | totally multiplicative sequence with a(p) = {p1}*(p+{p2}) for prime p | A166642, A166647, A167304, A167309, A167323 |
+| 651 |    27 | totally multiplicative sequence with a(p) = {p1}*(p-{p2}) for prime p | A166632, A166637, A167295, A167300, A167314 |
+| 652 |    27 | {A1}/{p1} | A036828, A073222, A098014, A151734, A190572 |
+| 653 |    27 | {{p1}->{p2}}-transform of the thue-morse word {A1} | A284622, A285957, A285972, A286049, A286339 |
+| 654 |    26 | a(n) = prime({p1}*n - {p2}) | A031372, A031380, A031390, A031905, A031910 |
+| 655 |    26 | a(n) = {A1}({A2}({A3}(n))) | A080067, A250470, A277806, A332819, A351449 |
+| 656 |    26 | a(n) = {p1}*(n+{p2})*binomial(n+{p3},{p4}) | A027777, A027787, A027795, A027805, A027813 |
+| 657 |    26 | antidiagonal sums of the convolution array {A1} | A213547, A213575, A213749, A213767, A213824 |
+| 658 |    26 | base {p1} digits are, in order, the first n terms of the periodic sequence with initial period {p2},{p3} | A033117, A037484, A037490, A037577, A037583 |
+| 659 |    26 | decimal expansion of least x>{p1} satisfying {p2}*x^{p3}-{p4}*x+{p5}=tan(x) | A200497, A200502, A200591, A200596, A200605 |
+| 660 |    26 | decimal expansion of x>{p1} satisfying {p2}*x^{p3}-{p4}*cos(x)={p5} | A198876, A198885, A198931, A198940, A198996 |
+| 661 |    26 | diagonal of {A1} | A056197, A082829, A083485, A083783, A091795 |
+| 662 |    26 | lexicographically earliest infinite sequence such that a(i) = a(j) => {A1}(i) = {A2}(j) and {A3}(i) = {A4}(j) for all i, j >= {p1} | A334867, A351085, A351461, A355834, A364951 |
+| 663 |    26 | number of (n+{p1}) x {p2} binary arrays avoiding patterns {p3} and {p4} in rows and columns | A202048, A202094, A202195, A202200, A202403 |
+| 664 |    26 | number of (n+{p1})x({p2}+{p3}) {p4}..{p5} arrays with each row and column not divisible by {p6}, read as a binary number with top and left being the most signif... | A263033, A263038, A263059, A263153, A263197 |
+| 665 |    26 | number of (n+{p1})x{p2} {p3}..{p4} arrays with every {p5}x{p6} or {p7}x{p8} subblock having no more than {p9} equal edges, and new values {p10}..{p11} introduce... | A206362, A206517, A206597, A206619, A206755 |
+| 666 |    26 | number of nx{p1} {p2}..{p3} arrays with each {p4} horizontally or vertically adjacent to {p5}, {p6} or {p7} {p8}s | A295248, A295273, A295351, A295412, A295528 |
+| 667 |    26 | number of partitions of n into parts {p1}k and {p2}k+{p3} with at least {p4} part of each type | A035618, A035627, A035638, A035652, A035672 |
+| 668 |    26 | number of permutations avoiding the consecutive pattern {p1} | A113229, A202216, A202221, A202226, A202231 |
+| 669 |    26 | number of planar n x n x n binary triangular grids symmetric both under {p1} degree rotation and reflection with no more than {p2} ones in any {p3} x {p4} x {p5... | A153910, A153925, A153940, A153955, A153970 |
+| 670 |    26 | number of planar n x n x n binary triangular grids symmetric under {p1} degree rotation with no more than {p2} ones in any {p3} x {p4} x {p5} subtriangle | A153908, A153923, A153938, A153953, A153968 |
+| 671 |    26 | number of planar n x n x n binary triangular grids with mirror symmetry about {p1} altitude with no more than {p2} ones in any {p3} x {p4} x {p5} subtriangle | A153909, A153924, A153939, A153954, A153969 |
+| 672 |    26 | number of planar n x n x n binary triangular grids with no more than {p1} ones in any similarly oriented {p2} x {p3} x {p4} subtriangle | A153549, A153556, A153561, A153566, A153571 |
+| 673 |    26 | number of planar n x n x n binary triangular grids with no more than {p1} ones in any {p2} x {p3} x {p4} subtriangle | A153522, A153527, A153532, A153538, A153543 |
+| 674 |    26 | number of walks within n^{p1} (the first octant of z^{p2}) starting at ({p3},{p4},{p5}) and consisting of n steps taken from {(-{p6}, -{p7}, {p8}), (-{p9}, {p10... | A148032, A148037, A149117, A149185, A149217 |
+| 675 |    26 | numbers k such that {A1}(k) = {A2}(k+{p1}) | A065062, A333261, A343133, A358817, A369211 |
+| 676 |    26 | numbers k such that {A1}(k) is divisible by k | A032563, A099851, A304045, A304211, A325935 |
+| 677 |    26 | numbers k such that {A1}(k+{p1}) = {A2}(k) + {p2} | A247910, A248188, A248420, A248566, A248630 |
+| 678 |    26 | numbers that are the sum of {p1} distinct nonzero squares in {p2} or more ways | A024804, A025317, A025350, A025355, A025389 |
+| 679 |    26 | numbers that are the sum of {p1} nonzero squares in {p2} or more ways | A007692, A025298, A025332, A025337, A025370 |
+| 680 |    26 | ooguri-vafa invariants of disk degeneracies for brane iii in the o(k) -> p^{p1} x p^{p2} geometry | A092699, A092706, A092711, A092716, A092721 |
+| 681 |    26 | row sums of triangle in {A1} | A059276, A077570, A121892, A154785, A238375 |
+| 682 |    26 | sum of divisors of {p1}*n-{p2} of form {p3}*k+{p4} | A362952, A363034, A363317, A363889, A364094 |
+| 683 |    26 | {p1}-limiting word of the morphism {p2}->{p3}, {p4}->{p5}, {p6}->{p7} | A106601, A107335, A287108, A287174, A287337 |
+| 684 |    25 | a(n) = t(n,n-{p1}), array t as in {A1} | A038740, A049789, A050148, A055803, A055810 |
+| 685 |    25 | a(n) = {p1}^n - {p2}^n + {p3} | A020515, A155611, A155622, A155650, A155660 |
+| 686 |    25 | a({p1})={p2}; a(n)=floor(({p3}+sum(a({p4}) to a(n-{p5})))/{p6}) | A120174, A120180, A120185, A120193, A120201 |
+| 687 |    25 | coefficients in expansion of dirichlet series product_p ({p1}-(kronecker(m,p)+{p2})*p^(-s)+kronecker(m,p)*p^(-{p3}s))^(-{p4}) for m = -{p5} | A035143, A035149, A035156, A035164, A035173 |
+| 688 |    25 | decimal expansion of ({p1} + {p2}*sqrt({p3}))/{p4} | A156571, A159691, A161480, A178593, A378812 |
+| 689 |    25 | decimal expansion of {p1}/pi | A049541, A132698, A132704, A132712, A132717 |
+| 690 |    25 | integers in ({p1}+{A1})/{p2}; contains {A2} as a proper subsequence | A190845, A191151, A191166, A191174, A191191 |
+| 691 |    25 | lexicographically least sequence of nonnegative integers that avoids {p1}/{p2}-powers | A269518, A277146, A277151, A277156, A277161 |
+| 692 |    25 | number of (n+{p1})x(n+{p2}) {p3}..{p4} arrays with each {p5}x{p6} subblock having clockwise perimeter pattern {p7} {p8} or {p9} | A259886, A260098, A260276, A260536, A260972 |
+| 693 |    25 | number of (n+{p1})x{p2} {p3}..{p4} arrays with every {p5}x{p6} or {p7}x{p8} subblock having exactly {p9} clockwise edge increases | A205982, A206058, A206068, A206202, A206323 |
+| 694 |    25 | number of (n+{p1})x{p2} {p3}..{p4} arrays with every {p5}x{p6} subblock having equal diagonal elements or equal antidiagonal elements, and new values {p7}..{p8}... | A203917, A203922, A204054, A204075, A204152 |
+| 695 |    25 | number of ({p1}+{p2})x(n+{p3}) arrays of permutations of {p4}..n*{p5}+{p6} with each element having index change +-(.,.) {p7},{p8} {p9},{p10} or {p11},{p12} | A264020, A264114, A264135, A264208, A264342 |
+| 696 |    25 | number of -{p1}..{p2} arrays x(i) of n+{p3} elements i={p4}..n+{p5} with set{t,u,v in {p6},{p7}}((x[i+t]+x[j+u]+x[k+v])*(-{p8})^(t+u+v)) having {p9}, {p10}, {p1... | A211530, A211583, A211592, A211735, A211752 |
+| 697 |    25 | number of nx{p1} {p2}..{p3} arrays with every {p4} horizontally, diagonally or antidiagonally adjacent to {p5} or {p6} neighboring {p7}s | A297453, A297504, A297518, A297543, A297593 |
+| 698 |    25 | number of partitions of n into numbers not divisible by {p1} where every part appears at least {p2} times | A161281, A161286, A161291, A161296, A161301 |
+| 699 |    25 | number of {p1}xn arrays of permutations of {p2}..n*{p3}-{p4} with rows nondecreasing modulo {p5} and columns nondecreasing modulo {p6} | A264561, A264660, A264700, A264715, A264819 |
+| 700 |    25 | numbers k such that k^{p1} == {p2} (mod {p3}^{p4}) | A056021, A056027, A056082, A056087, A056094 |
+| 701 |    25 | primes of the form {p1}*r_k + {p2}, where r_k is the repunit ({A1}) of length k | A091189, A093139, A093166, A093171, A093401 |
+| 702 |    25 | restricted growth sequence transform of {A1}({A2}(n)) | A290082, A304097, A304729, A304737, A304745 |
+| 703 |    25 | semiprimes in {A1} | A101619, A103396, A113519, A113530, A122499 |
+| 704 |    25 | the coding-theoretic function a(n,{p1},{p2}) | A001839, A004038, A004056, A005854, A005859 |

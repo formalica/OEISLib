@@ -10,6 +10,7 @@ Every line has the shape `%<tag> <A-number> <content>`. The tags used here:
 * `%O` offset (`<offset>,<index of first term with absolute value > 1>`)
 * `%K` keywords
 * `%F` formulas
+* `%C` comments
 * `%p` Maple programs, `%t` Mathematica programs, `%o` other-language programs
 -/
 
@@ -40,6 +41,8 @@ structure Entry where
   keywords : Array String
   terms : Array String
   formulas : Array String
+  /-- `%C` lines, in file order, tag stripped. -/
+  comments : Array String
   programs : Array Program
   sourceFile : String
   deriving Inhabited
@@ -116,6 +119,7 @@ def parseSeqFile (sourceFile : String) (fallbackName : String) (contents : Strin
   let mut tTerms := ""
   let mut uTerms := ""
   let mut formulas : Array String := #[]
+  let mut comments : Array String := #[]
   let mut mapleLines : Array String := #[]
   let mut mmaLines : Array String := #[]
   let mut otherLines : Array String := #[]
@@ -134,6 +138,7 @@ def parseSeqFile (sourceFile : String) (fallbackName : String) (contents : Strin
       | "%T" => tTerms := tTerms ++ content
       | "%U" => uTerms := uTerms ++ content
       | "%F" => if !content.isEmpty then formulas := formulas.push content
+      | "%C" => if !content.isEmpty then comments := comments.push content
       | "%p" => mapleLines := mapleLines.push content
       | "%t" => mmaLines := mmaLines.push content
       | "%o" => otherLines := otherLines.push content
@@ -152,7 +157,7 @@ def parseSeqFile (sourceFile : String) (fallbackName : String) (contents : Strin
     buildPrograms "o" "unknown" otherLines
   return some {
     name := if name.isEmpty then fallbackName else name
-    title, offset, offsetFirstBig, keywords, terms, formulas, programs, sourceFile
+    title, offset, offsetFirstBig, keywords, terms, formulas, comments, programs, sourceFile
   }
 
 /-- Stable identifier of a formula: hex encoding of `String.hash` of its text. -/

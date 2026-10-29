@@ -545,7 +545,7 @@ Per sequence a template:
 1. llm can read .seq files to determine collection patterns
 2. write code which check which formulas/comments/programs/maindefs are matching which collection of patterns and insert their formalizations into `formalization_item` table
 3. writen code should not read .seq files because it is slow, instead it should read the `sequence` table and maybe other tables to be fast
-4. use function of `oeis-gen` to generate `Data.lean`, `Defs.lean`, `Equiv_<hash>.lean`, `Basic_<hash>.lean` files for each sequence in the family. this will guarantee that all generated files ill have standard shape.
+4. optionally we can ask template to also use function of `oeis-gen` to generate `Data.lean`, `Defs.lean`, `Equiv_<hash>.lean`, `Basic_<hash>.lean` files for each sequence in the family. this will guarantee that all generated files ill have standard shape. but by default templates should not create lean files, they only need to write into `formalization_item` table.
 
 
 

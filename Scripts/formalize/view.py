@@ -193,7 +193,7 @@ def show_batch(
         head = (
             f"  {item['oeis_name']} {item['formula_hash']} "
             f"[{item['span_start']}:{item['span_end']}] {item['arg_kind']}"
-            f"{'' if item['computable'] else ' non-computable'}"
+            f"{'' if item['lean_kind'] != 'noncomputable' else ' non-computable'}"
         )
         print(paint(head, colour) + f"  {item['status']}")
         if item["depends_on"] not in ("", "[]"):

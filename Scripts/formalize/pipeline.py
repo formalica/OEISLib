@@ -307,7 +307,7 @@ def _persist(
             original_text=item.original_text,
             span_start=item.span_start,
             span_end=item.span_end,
-            computable=1 if item.computable else 0,
+            lean_kind="computable" if item.computable else "noncomputable",
             arg_kind=item.arg_kind,
             lean_code=item.lean_code,
             lean_file=item.equiv_path,

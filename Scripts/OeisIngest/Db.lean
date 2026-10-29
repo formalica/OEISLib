@@ -29,7 +29,9 @@ def schemaSql : String :=
      main_definition_hash           TEXT,
      formalized_formula_hashes      TEXT NOT NULL DEFAULT '[]',
      unformalized_formula_hashes    TEXT NOT NULL DEFAULT '[]',
-     all_unformalized_formulas_text TEXT NOT NULL DEFAULT '[]',
+     formula_lines                  TEXT NOT NULL DEFAULT '[]',
+     comment_lines                  TEXT NOT NULL DEFAULT '[]',
+     main_item_id                   INTEGER,
      status                         TEXT NOT NULL DEFAULT 'STATUS_UNKNOWN',
      source_file                    TEXT NOT NULL DEFAULT '',
      updated_at                     TEXT
@@ -87,17 +89,27 @@ def schemaSql : String :=
 
    CREATE TABLE IF NOT EXISTS formalization_item (
      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-     batch_id        INTEGER NOT NULL,
      oeis_name       TEXT NOT NULL,
+     producer        TEXT NOT NULL DEFAULT 'llm',
+     producer_params TEXT NOT NULL DEFAULT '{}',
+     batch_id        INTEGER,
      language        TEXT NOT NULL DEFAULT 'maple',
+     block_index     INTEGER NOT NULL DEFAULT 0,
      source_hash     TEXT NOT NULL DEFAULT '',
      formula_hash    TEXT NOT NULL,
      original_text   TEXT NOT NULL DEFAULT '',
      span_start      INTEGER,
      span_end        INTEGER,
-     computable      INTEGER NOT NULL DEFAULT 1,
+     lean_kind       TEXT NOT NULL DEFAULT 'computable',
      arg_kind        TEXT NOT NULL DEFAULT '',
+     lean_type       TEXT NOT NULL DEFAULT '',
      lean_code       TEXT NOT NULL DEFAULT '',
+     imports         TEXT NOT NULL DEFAULT '[]',
+     aux_code        TEXT NOT NULL DEFAULT '',
+     eq_statement    TEXT NOT NULL DEFAULT '',
+     eq_proof        TEXT NOT NULL DEFAULT '',
+     data_eq_proof   TEXT,
+     data_eq_aux     TEXT,
      lean_file       TEXT NOT NULL DEFAULT '',
      check_file      TEXT NOT NULL DEFAULT '',
      depends_on      TEXT NOT NULL DEFAULT '[]',
@@ -106,11 +118,12 @@ def schemaSql : String :=
      failure_points  TEXT NOT NULL DEFAULT '[]',
      compiler_output TEXT NOT NULL DEFAULT '',
      verified_upto   INTEGER NOT NULL DEFAULT 0,
+     verified_ranges TEXT NOT NULL DEFAULT '[]',
      attempt         INTEGER NOT NULL DEFAULT 1,
      notes           TEXT NOT NULL DEFAULT '',
      created_at      TEXT,
      updated_at      TEXT,
-     UNIQUE (batch_id, oeis_name, formula_hash)
+     UNIQUE (oeis_name, language, formula_hash, producer, lean_kind)
    );
 
    CREATE INDEX IF NOT EXISTS formalization_item_batch_idx ON formalization_item (batch_id);
@@ -154,8 +167,8 @@ def schemaSql : String :=
 private def sequenceUpsertSql : String :=
   "INSERT INTO sequence
      (name, title, \"offset\", offset_first_big, keywords, data, data_count,
-      unformalized_formula_hashes, all_unformalized_formulas_text, source_file, updated_at)
-   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'))
+      unformalized_formula_hashes, formula_lines, comment_lines, source_file, updated_at)
+   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'))
    ON CONFLICT(name) DO UPDATE SET
      title = excluded.title,
      \"offset\" = excluded.\"offset\",
@@ -164,7 +177,8 @@ private def sequenceUpsertSql : String :=
      data = excluded.data,
      data_count = excluded.data_count,
      unformalized_formula_hashes = excluded.unformalized_formula_hashes,
-     all_unformalized_formulas_text = excluded.all_unformalized_formulas_text,
+     formula_lines = excluded.formula_lines,
+     comment_lines = excluded.comment_lines,
      source_file = excluded.source_file,
      updated_at = excluded.updated_at;"
 
@@ -191,12 +205,59 @@ structure Stmts where
   formula : Stmt
   program : Stmt
 
+private def tableColumns (db : SQLite) (table : String) : IO (Array String) := do
+  let stmt ← db.prepare s!"PRAGMA table_info({table})"
+  let mut cols := #[]
+  while ← stmt.step do
+    cols := cols.push (← stmt.columnText 1)
+  return cols
+
+/-- Moves a database created by an older schema to the current one. Idempotent; mirrored by
+`_migrate` in `Scripts/formalize/db.py`. -/
+def migrate (db : SQLite) : IO Unit := do
+  let seqCols ← tableColumns db "sequence"
+  if seqCols.contains "all_unformalized_formulas_text" && !seqCols.contains "formula_lines" then
+    db.exec "ALTER TABLE sequence RENAME COLUMN all_unformalized_formulas_text TO formula_lines;"
+  unless seqCols.contains "comment_lines" do
+    db.exec "ALTER TABLE sequence ADD COLUMN comment_lines TEXT NOT NULL DEFAULT '[]';"
+  unless seqCols.contains "main_item_id" do
+    db.exec "ALTER TABLE sequence ADD COLUMN main_item_id INTEGER;"
+  -- `formalization_item` gained a producer; SQLite cannot drop `batch_id NOT NULL`, so rebuild.
+  let itemCols ← tableColumns db "formalization_item"
+  unless itemCols.contains "producer" do
+    db.exec ("BEGIN;
+      ALTER TABLE formalization_item RENAME TO formalization_item_old;
+      DROP INDEX IF EXISTS formalization_item_batch_idx;
+      DROP INDEX IF EXISTS formalization_item_seq_idx;
+      DROP INDEX IF EXISTS formalization_item_status_idx;" ++ schemaSql ++ "
+      INSERT OR REPLACE INTO formalization_item
+        (id, oeis_name, producer, batch_id, language, block_index, source_hash, formula_hash,
+         original_text, span_start, span_end, lean_kind, arg_kind, lean_code, lean_file,
+         check_file, depends_on, status, failure_kind, failure_points, compiler_output,
+         verified_upto, attempt, notes, created_at, updated_at)
+      SELECT o.id, o.oeis_name, 'llm', o.batch_id, o.language,
+             COALESCE((SELECT p.block_index FROM program p
+                       WHERE p.oeis_name = o.oeis_name AND p.hash = o.source_hash LIMIT 1), 0),
+             o.source_hash, o.formula_hash, o.original_text, o.span_start, o.span_end,
+             CASE o.computable WHEN 0 THEN 'noncomputable' ELSE 'computable' END,
+             o.arg_kind, o.lean_code, o.lean_file, o.check_file, o.depends_on, o.status,
+             o.failure_kind, o.failure_points, o.compiler_output, o.verified_upto, o.attempt,
+             o.notes, o.created_at, o.updated_at
+      FROM formalization_item_old o ORDER BY o.id;
+      DROP TABLE formalization_item_old;
+      COMMIT;")
+  db.exec "CREATE INDEX IF NOT EXISTS formalization_item_producer_idx
+             ON formalization_item (producer, language, status);
+           CREATE INDEX IF NOT EXISTS formalization_item_source_idx
+             ON formalization_item (oeis_name, source_hash);"
+
 def openDb (path : System.FilePath) : IO SQLite := do
   if let some parent := path.parent then
     IO.FS.createDirAll parent
   let db ← SQLite.«open» path (busyTimeoutMs := 5000)
   db.exec "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;"
   db.exec schemaSql
+  migrate db
   return db
 
 def prepareStmts (db : SQLite) : IO Stmts := do
@@ -222,7 +283,8 @@ def upsertEntry (stmts : Stmts) (e : Entry) : IO Unit := do
   s.bindInt64 7 (Int64.ofNat e.terms.size)
   s.bindText 8 (Json.strArray hashes)
   s.bindText 9 (Json.strArray e.formulas)
-  s.bindText 10 e.sourceFile
+  s.bindText 10 (Json.strArray e.comments)
+  s.bindText 11 e.sourceFile
   s.exec
 
   let f := stmts.formula

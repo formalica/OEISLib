@@ -34,8 +34,13 @@ globs = ["Check.+"]
 
 [[lean_lib]]
 name = "Scripts"
-roots = ["Scripts.OeisIngest", "Scripts.OeisGen", "Scripts.OeisCache"]
-globs = ["Scripts.OeisIngest.+", "Scripts.OeisGen.+", "Scripts.OeisCache"]
+roots = ["Scripts.OeisIngest", "Scripts.OeisGen", "Scripts.OeisCache", "Scripts.OeisTemplate"]
+globs = ["Scripts.OeisIngest.+", "Scripts.OeisGen.+", "Scripts.OeisCache", "Scripts.OeisTemplate.+", "Scripts.Templates.+"]
+
+# Math shared by the members of a sequence family; imported by generated Equiv files and by templates.
+[[lean_lib]]
+name = "OEISLib"
+globs = ["OEISLib.Common.+"]
 
 # Standalone expression parser: no OEIS dependency, and no Mathlib import outside GenExpr.Verify
 # (Mathlib is loaded into a scratch environment at runtime instead).
@@ -58,6 +63,14 @@ root = "Scripts.OeisGen"
 [[lean_exe]]
 name = "oeis-cache"
 root = "Scripts.OeisCache"
+
+[[lean_exe]]
+name = "oeis-template"
+root = "Scripts.OeisTemplate"
+
+[[lean_exe]]
+name = "oeis-template-test"
+root = "Scripts.OeisTemplate.IntegrationTest"
 
 [[lean_exe]]
 name = "genexpr-test"
