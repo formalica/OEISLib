@@ -2,7 +2,7 @@
 language:
 - code
 license: cc-by-sa-4.0
-pretty_name: LOEIS - Lean OEIS Formalization
+pretty_name: OEISLib - Lean OEIS Formalization
 size_categories:
 - 100K<n<1M
 source_datasets:
@@ -15,7 +15,7 @@ tags:
 - sequence-formalization
 ---
 
-# LOEIS
+# OEISLib
 
 Formalizing OEIS sequences in Lean 4 + Mathlib. See [SPEC.md](SPEC.md) and [OEIS.md](OEIS.md)
 for the design, and [AGENTS.md](AGENTS.md) for current project status.
@@ -93,7 +93,7 @@ Add `--limit N` while iterating to only ingest the first N files. See
 
 ## 2. Generate the Lean skeletons
 
-Reads `Metadata/oeis.db` and writes `LOEIS/<bucket>/<name>/{Defs,Data}.lean` (every declaration
+Reads `Metadata/oeis.db` and writes `OEISLib/<bucket>/<name>/{Defs,Data}.lean` (every declaration
 is `sorry` at this stage):
 
 ```bash
@@ -118,7 +118,7 @@ after later stages have replaced `sorry`s with real proofs.
 lake build
 ```
 
-This compiles every generated sequence file plus the `LOEIS`/bucket aggregators. Expect
+This compiles every generated sequence file plus the `OEISLib`/bucket aggregators. Expect
 `declaration uses 'sorry'` warnings — that's expected until the formula formalization step
 (see [AGENTS.md](AGENTS.md#open-items--next-steps)) is implemented.
 
@@ -163,8 +163,8 @@ lake exe oeis-cache prune    # delete *.setup.json
 Building bucket-by-bucket and pruning in between keeps peak disk near ~100 GB instead of ~1.5 TB:
 
 ```bash
-for b in LOEIS/A*; do
-  lake build "LOEIS.$(basename "$b")" && lake exe oeis-cache prune
+for b in OEISLib/A*; do
+  lake build "OEISLib.$(basename "$b")" && lake exe oeis-cache prune
 done
 ```
 

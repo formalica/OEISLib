@@ -27,7 +27,7 @@ Progress is never written in `AGENTS.md`.
 - **2026-08-20** — Rewrote README.md: elan/toolchain setup, `lake exe cache get`, oeisdata
   acquisition pointer, then the three-step ingest → gen → build pipeline with common flags.
 - **2026-08-20** — Planned the Hugging Face migration. Measured: `.lake/build` 189 GB (98k of
-  792k modules), of which `ir/` is 178 GB; oleans 9.6 GB; `LOEIS/` 4.6 GB / 792,809 files;
+  792k modules), of which `ir/` is 178 GB; oleans 9.6 GB; `OEISLib/` 4.6 GB / 792,809 files;
   Mathlib is *not* in `.lake/build` (it lives in `.lake/packages/mathlib/.lake/build`, 6.5 GB).
   Confirmed oeisdata upstream is `github.com/oeis/oeisdata` (`seq/` 398,471 entries,
   `files/` 275,775). Un-ignored `oeisdata` and `Metadata/*.db`, added `.gitattributes` LFS rule,
@@ -155,7 +155,7 @@ Progress is never written in `AGENTS.md`.
   `Metadata/templates.txt` (gitignored), `TEMPLATES.md`, `tmp_sample.lean`. Nothing tracked was
   touched. Not copied yet, pending the user's decision: `README.md`, `lakefile.toml`, `AGENTS.md`
   (template2 version carries the parser lineage), `Metadata/oeis.db` (an LFS pointer that would
-  replace the local DB), 5,558 modified `LOEIS/**/Defs.lean`, and 5,546 new `LOEIS/**/Equiv_*.lean`.
+  replace the local DB), 5,558 modified `OEISLib/**/Defs.lean`, and 5,546 new `OEISLib/**/Equiv_*.lean`.
   `Scripts/OeisParseReport.lean` imports `FormulaParser.Parser`, so it will not compile until the
   parser is copied. It is outside every lean_lib glob, so `lake build` is unaffected.
 - **2026-10-29** — Documented the current database in the `# Database` section of [Impl/README.md](Impl/README.md) (moved later, see below): the seven
@@ -216,3 +216,4 @@ Progress is never written in `AGENTS.md`.
 
 - **2026-10-29** — Reverted the open-items part of the change above at the user's request: open items and next steps are written in AGENTS.md again. RULE 1, the RULE reminder and the Decisions bullet in AGENTS.md now say so. Progress is still kept in this file. No code changed.
 - **2026-10-30** — Ported `GenExpr`, `GenExprTests`, and `Scripts` to Lean's explicit module system. Exported existing APIs and runtime/meta import edges, exposed the `Residue.membersUpTo` body needed by its exported definitional-equality theorem, and documented the module/build conventions in `Impl/BuildAndCache.md`. The combined library/executable build completed successfully (9,898 jobs). `lake exe genexpr-test --engine internal` passed 34 checks with one Lean-engine-only case skipped; `lake exe oeis-template-test` passed.
+- **2026-10-31** — Confirmed `Metadata/oeis.db` already matched `.gitignore` but remained tracked. Staged its removal from the index without deleting the local database; updated the repository notes. Existing tracked `OEISLib` files remain tracked, while new files there are ignored except under `Common/`.

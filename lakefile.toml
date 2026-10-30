@@ -1,16 +1,17 @@
-name = "LOEIS"
+name = "OEISLib"
 version = "0.1.0"
 keywords = ["math"]
-defaultTargets = ["LOEIS", "GenExprTests"]
+defaultTargets = ["OEISLib"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 relaxedAutoImplicit = false
 weak.linter.mathlibStandardSet = true
 maxSynthPendingDepth = 3
-# Generated LOEIS skeletons have unused binders and long term lists by construction.
+# Generated OEISLib skeletons have unused binders and long term lists by construction.
 weak.linter.unusedVariables = false
 weak.linter.style.longLine = false
+# warn.sorry = false
 
 [[require]]
 name = "mathlib"
@@ -23,9 +24,6 @@ scope = "leanprover"
 rev = "main"
 
 
-# [[lean_lib]]
-# name = "LOEIS"
-# globs = ["LOEIS.+"]
 
 # Scratch library for generated validation modules; not part of `defaultTargets`.
 # [[lean_lib]]
@@ -40,7 +38,8 @@ globs = ["Scripts.OeisIngest.+", "Scripts.OeisGen.+", "Scripts.OeisCache", "Scri
 # Math shared by the members of a sequence family; imported by generated Equiv files and by templates.
 [[lean_lib]]
 name = "OEISLib"
-globs = ["OEISLib.Common.+"]
+globs = ["OEISLib.+"]
+leanOptions = { warn.sorry = false }
 
 # Standalone expression parser: no OEIS dependency, and no Mathlib import outside GenExpr.Verify
 # (Mathlib is loaded into a scratch environment at runtime instead).

@@ -37,7 +37,7 @@ while setup files are excluded because Lake regenerates them.
 
 ## Targeted builds
 
-Build the package libraries and their `#guard` tests without building the generated `LOEIS` tree:
+Build the package libraries and their `#guard` tests without building the generated `OEISLib` tree:
 
 ```bash
 lake build GenExpr GenExprTests Scripts

@@ -62,7 +62,7 @@ generator is **done**. The **Maple → Lean LLM formalization pipeline is implem
 
 The ingest executable walks `oeisdata/seq`, parses every `.seq` file, and populates a SQLite
 database at `Metadata/oeis.db` (git-ignored, ~360 MB). The generator reads that DB and writes
-`LOEIS/<bucket>/<name>/{Defs,Data}.lean` where every declaration is `sorry`.
+`OEISLib/<bucket>/<name>/{Defs,Data}.lean` where every declaration is `sorry`.
 
 `GenExpr`, `GenExprTests`, and `Scripts` use Lean's explicit module system. Their cross-module APIs
 and required runtime/meta imports are documented in [Impl/BuildAndCache.md](Impl/BuildAndCache.md).
@@ -91,8 +91,8 @@ put it inside the namespace as `A000012.flat`.
 
 `data` holds every term OEIS knows, indexed from `offset`, so `a(n) = data[n - offset]`.
 
-Aggregators are rebuilt from the filesystem on every run: `LOEIS/<bucket>/{Defs,Data}.lean`
-import each sequence, and `LOEIS/{Defs,Data}.lean` import each bucket.
+Aggregators are rebuilt from the filesystem on every run: `OEISLib/<bucket>/{Defs,Data}.lean`
+import each sequence, and `OEISLib/{Defs,Data}.lean` import each bucket.
 
 ### Files
 
@@ -112,7 +112,7 @@ import each sequence, and `LOEIS/{Defs,Data}.lean` import each bucket.
 | [Impl/Templates.md](Impl/Templates.md) | template contract, runner, the four templates, authoring guide, differences from Spec.md |
 | [GenExpr/](GenExpr/) | standalone expression parser (see [Spec.md](Spec.md) §GenExprParser) |
 | [GenExprTests/](GenExprTests/) | `#guard` suites + `lake exe genexpr-test` runner |
-| [lakefile.toml](lakefile.toml) | `Scripts` + `OEISLib` lean_libs, `oeis-ingest` / `oeis-gen` / `oeis-cache` / `oeis-template` / `oeis-template-test` lean_exe, `LOEIS.+`, `Check.+`, `GenExpr.+`, `GenExprTests.+`, `OEISLib.Common.+` globs |
+| [lakefile.toml](lakefile.toml) | `Scripts` + `OEISLib` lean_libs, `oeis-ingest` / `oeis-gen` / `oeis-cache` / `oeis-template` / `oeis-template-test` lean_exe, `OEISLib.+`, `Check.+`, `GenExpr.+`, `GenExprTests.+`, `OEISLib.Common.+` globs |
 | [FORMALIZE.md](FORMALIZE.md) | design doc for the LLM formalization pipeline |
 | [Skills/maple/SKILL.md](Skills/maple/SKILL.md) | Maple→Lean instructions + filterable function table |
 | [Check/Basic.lean](Check/Basic.lean) | `Oeis.Check.report`, throws on term mismatch so `lake build` fails |
@@ -212,7 +212,7 @@ lake build oeis-ingest
 lake exe oeis-ingest [--seq-dir oeisdata/seq] [--db Metadata/oeis.db] [--limit N]
 
 lake build oeis-gen
-lake exe oeis-gen [--db Metadata/oeis.db] [--out LOEIS] [--all] [--bucket A000]... [--seq A000001]... [--force]
+lake exe oeis-gen [--db Metadata/oeis.db] [--out OEISLib] [--all] [--bucket A000]... [--seq A000001]... [--force]
 
 lake build oeis-cache
 lake exe oeis-cache <prune|stat|put|get> [--archive PATH] [--manifest PATH] [--build-dir PATH] [--level N] [--force]
@@ -264,15 +264,13 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 - **Linter options live in `lakefile.toml`, never in generated files** —
   `weak.linter.unusedVariables = false` and `weak.linter.style.longLine = false`, because the
   skeletons have unused binders (proofs are `sorry`) and very long term lists by construction.
-  The Spec-requested suppression for sorry-declaration warnings is not configured; see
-  [Impl/BuildAndCache.md](Impl/BuildAndCache.md#differences-from-specmd).
 - **Hosting moves to Hugging Face**: `https://huggingface.co/datasets/formalica/lean4oeis`.
-  GitHub is dropped (CI in `workflows/` is lost). All 792k `LOEIS/**.lean` files are committed
-  raw, despite HF recommending <100k files per repo.
+  GitHub is dropped (CI in `workflows/` is lost). Existing generated files under `OEISLib/`
+  remain tracked; new files are ignored except under `OEISLib/Common/`.
 - **`oeisdata` is NOT a submodule** — it stays git-ignored and users clone it themselves,
   shallow + sparse (`seq/` only), from `https://github.com/oeis/oeisdata`.
-- **`Metadata/oeis.db` is committed via Git LFS** (`.gitattributes`), no longer git-ignored.
-  HF upgrades LFS to Xet storage server-side.
+- **`Metadata/oeis.db` is local and git-ignored**, not intended for version control; its tracked
+  index entry is staged for removal while the local database remains intact.
 - **`*.setup.json` is pruned, never cached.** Lake writes one per module (~1.8 MB with
   `import Mathlib.Tactic`) = 174 GB of the 187 GB build dir. `Module.checkArtifactsExist`
   checks `.olean`/`.ilean`/`.c` but *not* `setup.json`, so deleting them is safe.
@@ -296,7 +294,7 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 - **The `formula_eq` theorem is appended by the pipeline, never requested from the model**, and
   is `sorry` — this stage only formalizes.
 - **Dependencies are validated through data-backed shims** in `Check/B<id>/`, because every
-  `LOEIS` main definition is still `sorry`. Asking a shim out of range is `STATUS_DEP_RANGE`,
+  `OEISLib` main definition is still `sorry`. Asking a shim out of range is `STATUS_DEP_RANGE`,
   a distinct outcome from a wrong translation.
 - **`computable = false` items are stored but never compiled** — generating functions / real
   analysis wait for a later validation stage.
@@ -318,7 +316,7 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   `formula_eq` statement and proof (`eq_statement`, `eq_proof`) because the Spec's `data_eq` field does
   not cover them. The same text may have a `prop` and a `computable` item (`lean_kind` is in the key).
 - **Shared template math lives in `OEISLib/Common/`** (namespace `OEISLib.Common.<Name>`). The Spec's
-  later `LOEIS` → `OEISLib` rename is not done.
+  later `OEISLib` → `OEISLib` rename is not done.
 - **Recognized snippets exclude credits and comments**: `Recognize.codeEnd` cuts a trailing
   `- _Name_, date` and `(* … *)`; the language marker `(PARI)` etc. is not in the stored program text.
 - **`%F` and `%C` are stored verbatim in `sequence`** (`formula_lines`, `comment_lines`); the old
@@ -333,7 +331,7 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   cross-module declarations are exported with `public section`, runtime dependencies with
   `public import`, and compile-time test dependencies with `public meta import`.
 
-- **`GenExpr/` is standalone**: it imports nothing from LOEIS/Scripts, and nothing from Mathlib
+- **`GenExpr/` is standalone**: it imports nothing from OEISLib/Scripts, and nothing from Mathlib
   either — Mathlib will be loaded into a scratch environment at runtime by `GenExpr.Verify`.
   That keeps ~90% of the tests running in milliseconds.
 - **Segmentation is a max-weight non-overlapping cover DP over every start position**, never
@@ -463,13 +461,13 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 - A library that imports Mathlib (`OEISLib.Common.*`) makes the importing exe link all of Mathlib's C
   output (`lake build oeis-template` the first time compiles ~6000 `:c.o` jobs); `#guard` files that import
   it need `set_option linter.hashCommand false`.
-- `lake build` with no target also builds the 792k `LOEIS` modules. For this tree use
+- `lake build` with no target also builds the 792k `OEISLib` modules. For this tree use
   `lake build Scripts OEISLib oeis-template oeis-template-test oeis-ingest oeis-gen`.
 
 ## Open items / next steps
 
-1. **Validate the prune+cache round trip on the `cache_test` branch.** Build `LOEIS.A000`,
-   `oeis-cache prune`, confirm `lake build LOEIS.A000` is still a no-op, then `put`, upload,
+1. **Validate the prune+cache round trip on the `cache_test` branch.** Build `OEISLib.A000`,
+   `oeis-cache prune`, confirm `lake build OEISLib.A000` is still a no-op, then `put`, upload,
    and `get` on another box.
 2. **Run the formalization pipeline at scale.** `uv pip install anthropic` is required for the
    default `anthropic:claude-sonnet-4-5` model; the live path has not been exercised yet, only
@@ -504,10 +502,10 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
       `termination_by` would be cheaper to prove things about.
     * *Later* — LaTeX/Wolfram frontends (`GenExpr.Ast` is the extension point), `PowerSeries` /
       `EReal` (`Ty` has an `other` constructor reserved).
-12. `lake build` with no target builds `LOEIS` (792k modules) — it is in `defaultTargets`. Use
+12. `lake build` with no target builds `OEISLib` (792k modules) — it is in `defaultTargets`. Use
     `lake build GenExpr GenExprTests genexpr-test` for parser work.
 13. **Template files copied from `origin/template2` are now rewritten** onto the new interface. Still
-    untracked and not merged: `README.md`, `lakefile.toml`, `Metadata/oeis.db`, 5,558 LOEIS `Defs.lean`
+    untracked and not merged: `README.md`, `lakefile.toml`, `Metadata/oeis.db`, 5,558 OEISLib `Defs.lean`
     and 5,546 `Equiv_*.lean` of that branch were never copied; `oeis-gen` must regenerate equivalents
     from items. `Scripts/OeisParseReport.lean` (imports the absent `FormulaParser`) is outside every
     glob and can be deleted.

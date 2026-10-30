@@ -18,7 +18,7 @@ open SQLite
 
 structure Config where
   dbPath : System.FilePath := "Metadata/oeis.db"
-  outDir : System.FilePath := "LOEIS"
+  outDir : System.FilePath := "OEISLib"
   seqs : Array String := #[]
   buckets : Array String := #[]
   all : Bool := false
@@ -93,7 +93,7 @@ private def writeIfAllowed (path : System.FilePath) (contents : String) (force :
 
 /-- Rebuilds `<out>/<bucket>/{Defs,Data}.lean` and `<out>/{Defs,Data}.lean` from what is on disk. -/
 def writeAggregators (cfg : Config) : IO Nat := do
-  let libName := cfg.outDir.fileName.getD "LOEIS"
+  let libName := cfg.outDir.fileName.getD "OEISLib"
   let mut buckets := #[]
   for entry in (← cfg.outDir.readDir) do
     let bucket := entry.fileName
@@ -121,7 +121,7 @@ def writeAggregators (cfg : Config) : IO Nat := do
 def run (cfg : Config) : IO Unit := do
   unless ← cfg.dbPath.pathExists do
     throw <| IO.userError s!"database not found: {cfg.dbPath} (run `lake exe oeis-ingest` first)"
-  let libName := cfg.outDir.fileName.getD "LOEIS"
+  let libName := cfg.outDir.fileName.getD "OEISLib"
   let db ← SQLite.«open» cfg.dbPath
   let seqs ← fetchSequences db cfg
   IO.println s!"Generating {seqs.size} sequences into {cfg.outDir} ..."

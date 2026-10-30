@@ -3,7 +3,7 @@ public import Scripts.OeisIngest.Json
 
 /-!
 Packs and restores the compiled `.lake/build` artifacts so that a fresh checkout does not have
-to re-elaborate all of `LOEIS`.
+to re-elaborate all of `OEISLib`.
 
     lake exe oeis-cache prune    -- delete regenerable *.setup.json (the bulk of .lake/build)
     lake exe oeis-cache stat     -- report artifact counts and sizes by extension

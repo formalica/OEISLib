@@ -55,7 +55,7 @@ def _attribute(output: str) -> dict[str, list[str]]:
             continue
         if line.startswith(("✔", "✖", "⚠", "ℹ", "info:", "warning:", "trace:",
                             "Build completed", "Some required targets", "- Check.",
-                            "- LOEIS.")):
+                            "- OEISLib.")):
             current = None
             continue
         if current is not None:

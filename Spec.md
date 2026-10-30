@@ -275,7 +275,7 @@ lake exe oeis-gen --hash <hash> # generate files from successfully formalized it
 # OEISLib — per-sequence file shape
 
 For each OEIS sequence `<name>` (its A-number, e.g. `A000027`) the
-formalization lives in the directory `LOEIS/<bucket>/<name>/` (e.g. `LOEIS/A000/A000027/`).
+formalization lives in the directory `OEISLib/<bucket>/<name>/` (e.g. `OEISLib/A000/A000027/`).
 
 Files:
 
@@ -287,8 +287,9 @@ Files:
 
 
 ## Naming and type resolution
-- All declarations are inside `namespace <name>`, except the main definition, 
+- Defs and Data declarations are inside `namespace <name>`, except the main definition
   which is at top level and is named `<name>`.
+- Equiv and Basic declarations should be inside `namespace <name>_<firs_8chars_of_hash>`.
 - Type abbrevs start with a capital letter: `ArgType`, `RetType`,
   `FlatArgType`, `FlatRetType`. Every other declaration — values, functions,
   theorems, and the offset constants `offset` / `flatOffset` — starts
@@ -519,7 +520,7 @@ expansion.
 
 
 ## TO_BE_CHANGED
-- we should move current OEISLib files to LOEIS/Common,rename LOEIS to OEISLib and update all imports accordingly 
+- we should move current OEISLib files to OEISLib/Common,rename OEISLib to OEISLib and update all imports accordingly 
 - avoid from importing `Mathlib.Tactic` in Defs and Data files if all defs and theorems are filled by sorry
 
 

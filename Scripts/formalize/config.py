@@ -9,18 +9,18 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_DB = REPO_ROOT / "Metadata" / "oeis.db"
-DEFAULT_LOEIS = REPO_ROOT / "LOEIS"
+DEFAULT_OEISLib = REPO_ROOT / "OEISLib"
 DEFAULT_CHECK = REPO_ROOT / "Check"
 DEFAULT_SKILLS = REPO_ROOT / "Skills"
 
-LOEIS_LIB = "LOEIS"
+OEISLib_LIB = "OEISLib"
 CHECK_LIB = "Check"
 
 
 @dataclass
 class Config:
     db_path: Path = DEFAULT_DB
-    loeis_dir: Path = DEFAULT_LOEIS
+    loeis_dir: Path = DEFAULT_OEISLib
     check_dir: Path = DEFAULT_CHECK
     skills_dir: Path = DEFAULT_SKILLS
     language: str = "maple"

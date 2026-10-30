@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .config import CHECK_LIB, LOEIS_LIB
+from .config import CHECK_LIB, OEISLib_LIB
 
 SEQ_REF = re.compile(r"\bA\d{6}\b")
 
@@ -58,7 +58,7 @@ class SeqInfo:
         return ["Nat", "NatSub"]
 
     def module(self, suffix: str) -> str:
-        return f"{LOEIS_LIB}.{self.bucket}.{self.name}.{suffix}"
+        return f"{OEISLib_LIB}.{self.bucket}.{self.name}.{suffix}"
 
 
 def arg_type_str(kind: str, offset: int) -> str:

@@ -29,7 +29,7 @@ oeisdata/seq/*.seq
   plus  skipped[] { oeis_name, start_marker, reason }       │
         │                                                  │
         ▼  span resolution, shape check, arg_kind check     │
-  LOEIS/<bucket>/<seq>/Equiv_<hash>.lean                    │
+  OEISLib/<bucket>/<seq>/Equiv_<hash>.lean                    │
   Check/B<batch>/<seq>_<hash>.lean                          │
   program_gap  ← whatever no item claimed                   │
         │                                                  │
@@ -87,7 +87,7 @@ lake build oeis-ingest && lake exe oeis-ingest
 - are **not** `tabl` / `tabf` — multi-parameter sequences are out of scope for now,
 - have no `formalization_item` with the same `source_hash` (unless `--include-attempted`).
 
-The CLI additionally drops sequences whose `LOEIS/.../Defs.lean` does not exist yet, because
+The CLI additionally drops sequences whose `OEISLib/.../Defs.lean` does not exist yet, because
 the generated `Equiv` file imports it.
 
 `group_batches` then packs rows into batches of `--batch-size`, with the constraint that **one
@@ -239,8 +239,8 @@ Two further rejections happen in `_validate`:
 `<hash>` is a blake2b-64 of `original_text`, so the same snippet always maps to the same file.
 
 ```lean
-import LOEIS.A001.A001006.Defs
-import LOEIS.A000.A000108.Defs
+import OEISLib.A001.A001006.Defs
+import OEISLib.A000.A000108.Defs
 
 /-! ... title, original Maple source, chosen types ... -/
 
@@ -261,7 +261,7 @@ purpose: this stage only formalizes, proofs come later.
 
 ### 6.2 `Check/B<batch>/<seq>_<hash>.lean`
 
-Every main definition in `LOEIS` is still `sorry`, so a translation that calls `A000108.fn`
+Every main definition in `OEISLib` is still `sorry`, so a translation that calls `A000108.fn`
 cannot be executed against the real definition. The check module therefore rebuilds the
 translation against **data-backed shims**:
 
@@ -316,7 +316,7 @@ attributed.
 `[{"n": "3", "expected": "5", "got": "4"}, ...]` stored in `formalization_item.failure_points`,
 which is the "failure points (argument values)" record.
 
-Only `STATUS_VERIFIED` items keep their `Equiv` file; everything else is deleted from `LOEIS`
+Only `STATUS_VERIFIED` items keep their `Equiv` file; everything else is deleted from `OEISLib`
 but stays in the database.
 
 ### Non-computable items
