@@ -15,7 +15,7 @@ weak.linter.style.longLine = false
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.34.0-rc1"
+rev = "v4.36.0-rc2"
 
 [[require]]
 name = "leansqlite"
@@ -23,14 +23,14 @@ scope = "leanprover"
 rev = "main"
 
 
-[[lean_lib]]
-name = "LOEIS"
-globs = ["LOEIS.+"]
+# [[lean_lib]]
+# name = "LOEIS"
+# globs = ["LOEIS.+"]
 
 # Scratch library for generated validation modules; not part of `defaultTargets`.
-[[lean_lib]]
-name = "Check"
-globs = ["Check.+"]
+# [[lean_lib]]
+# name = "Check"
+# globs = ["Check.+"]
 
 [[lean_lib]]
 name = "Scripts"

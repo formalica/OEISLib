@@ -1,6 +1,9 @@
+module
 import SQLite
+public import SQLite.LowLevel
 import Scripts.OeisIngest.Db
-
+import Scripts.OeisIngest.Json
+import Scripts.OeisIngest.Parse
 /-!
 Everything a template may know about one sequence, loaded from `Metadata/oeis.db`.
 
@@ -18,6 +21,8 @@ Templates never see `oeisdata/`. Each *section* of a sequence has one canonical 
 namespace Oeis.Template
 
 open SQLite
+
+public section
 
 /-- One row of the `program` table. -/
 structure ProgramBlock where
@@ -37,7 +42,6 @@ structure SeqSource where
   commentLines : Array String
   programs : Array ProgramBlock
 
--- Section names that do not denote a programming language.
 namespace Section
 def maindef : String := "maindef"
 def formula : String := "formula"
@@ -97,4 +101,5 @@ def loadSource (db : SQLite) (name : String) : IO (Option SeqSource) := do
       hash := ← progStmt.columnText 3 }
   return some { name, title, offset, terms, formulaLines, commentLines, programs }
 
+end
 end Oeis.Template

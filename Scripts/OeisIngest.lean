@@ -1,4 +1,5 @@
-import Scripts.OeisIngest.Db
+module
+public import Scripts.OeisIngest.Db
 
 /-!
 Ingest step: walk `oeisdata/seq`, parse every `.seq` file and populate the
@@ -8,6 +9,7 @@ Ingest step: walk `oeisdata/seq`, parse every `.seq` file and populate the
 -/
 
 namespace Oeis.Ingest
+public section
 
 structure Config where
   seqDir : System.FilePath := "oeisdata/seq"
@@ -86,6 +88,7 @@ def run (cfg : Config) : IO Stats := do
   db.exec "COMMIT"
   return stats
 
+end
 end Oeis.Ingest
 
 def main (args : List String) : IO UInt32 := do

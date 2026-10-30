@@ -1,7 +1,8 @@
-import Scripts.Templates.Coxeter
-import Scripts.Templates.PrimeCongruent
-import Scripts.Templates.SqrtContinuedFraction
-import Scripts.Templates.WalkN3
+module
+public import Scripts.Templates.Coxeter
+public import Scripts.Templates.PrimeCongruent
+public import Scripts.Templates.SqrtContinuedFraction
+public import Scripts.Templates.WalkN3
 
 /-!
 Registry of the templates known to `lake exe oeis-template`. A new template is a module
@@ -9,6 +10,7 @@ Registry of the templates known to `lake exe oeis-template`. A new template is a
 -/
 
 namespace Oeis.Template
+public section
 
 /-- All available templates. -/
 def templates : Array Template :=
@@ -18,4 +20,5 @@ def templates : Array Template :=
 def findTemplate? (name : String) : Option Template :=
   templates.find? fun t => t.name == name
 
+end
 end Oeis.Template

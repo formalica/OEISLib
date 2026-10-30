@@ -1,6 +1,10 @@
-import GenExpr.Typed
-import GenExpr.Normalize
-import GenExpr.Plan
+module
+public import GenExpr.Typed
+public meta import GenExpr.Typed
+public import GenExpr.Normalize
+public meta import GenExpr.Normalize
+public import GenExpr.Plan
+public meta import GenExpr.Plan
 
 /-!
 Type inference.
@@ -19,6 +23,7 @@ Narrowing (`ℤ → ℕ`, `⌊·⌋₊`) is offered only at the root, and only a
 -/
 
 namespace GenExpr
+public section
 
 /-- One typed reading of a subexpression. -/
 structure Choice where
@@ -369,4 +374,5 @@ def typeProp (reg : Registry) (k : Nat) (g : PropGoal) (want : FnTy) : List Typi
     { name := "statement", params, ret := .prop, expr := body, cost := c.cost + g.cost
       computable := body.computable }
 
+end
 end GenExpr

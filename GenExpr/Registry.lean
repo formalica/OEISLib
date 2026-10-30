@@ -1,4 +1,6 @@
-import GenExpr.Ast
+module
+public import GenExpr.Ast
+public meta import GenExpr.Ast
 
 /-!
 The catalogue of Lean terms a surface name can stand for.
@@ -21,6 +23,7 @@ space small and the output readable.
 -/
 
 namespace GenExpr
+public section
 
 /-- One Lean term a surface name can denote, with everything needed to type and print it. -/
 structure Alt where
@@ -290,4 +293,5 @@ def allImports : Array String :=
 
 end Builtins
 
+end
 end GenExpr

@@ -1,8 +1,13 @@
-import Scripts.OeisTemplate.Recognize
+module
+public import Scripts.OeisTemplate.Recognize
+public meta import Scripts.OeisTemplate.Recognize
+public import Scripts.OeisIngest.Json
+public meta import Scripts.OeisIngest.Json
 
 /-! `#guard` tests for the pure parts of the template infrastructure; a failure breaks `lake build`. -/
 
 namespace Oeis.Template.Tests
+public section
 
 open Recognize
 
@@ -74,4 +79,5 @@ private def whole (want : String) : List LineRecognizer :=
 #guard Json.parseArray (Json.termArray #["1", "-2", "x"]) == some #["1", "-2", "x"]
 #guard Json.parseArray "[\"a\"" == none
 
+end
 end Oeis.Template.Tests

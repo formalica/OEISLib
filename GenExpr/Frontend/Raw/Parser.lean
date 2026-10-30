@@ -1,6 +1,10 @@
-import GenExpr.Ast
-import GenExpr.Frontend.Raw.Prescan
-import Std.Data.HashMap
+module
+public import GenExpr.Ast
+public meta import GenExpr.Ast
+public import GenExpr.Frontend.Raw.Prescan
+public meta import GenExpr.Frontend.Raw.Prescan
+public import Std.Data.HashMap
+public meta import Std.Data.HashMap
 
 /-!
 Pratt parser for the raw syntax.
@@ -22,6 +26,7 @@ postfix `!` 90.
 -/
 
 namespace GenExpr.Raw
+public section
 
 /-- One parse: the tree, the next token index, and a penalty (lower is a more likely reading). -/
 structure Res where
@@ -480,4 +485,5 @@ def parseAll (cls : Classifier) (s : String) : Input × Array Token × List Res 
   let ctx : PCtx := { inp, toks, cls }
   (inp, toks, parseFrom ctx 0)
 
+end
 end GenExpr.Raw

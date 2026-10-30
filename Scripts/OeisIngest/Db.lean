@@ -1,5 +1,8 @@
+module
 import SQLite
-import Scripts.OeisIngest.Parse
+public import SQLite.LowLevel
+public import Scripts.OeisIngest.Parse
+public import Scripts.OeisIngest.Json
 
 /-!
 SQLite schema and upsert logic for the OEIS metadata database.
@@ -11,6 +14,7 @@ results written by other scripts survive.
 -/
 
 namespace Oeis.Db
+public section
 
 open SQLite
 
@@ -311,4 +315,5 @@ def upsertEntry (stmts : Stmts) (e : Entry) : IO Unit := do
     p.bindInt64 7 (Int64.ofNat (prog.text.splitOn "\n").length)
     p.exec
 
+end
 end Oeis.Db

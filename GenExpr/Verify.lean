@@ -1,4 +1,6 @@
-import GenExpr.Eval.Interp
+module
+public import GenExpr.Eval.Interp
+public meta import GenExpr.Eval.Interp
 
 /-!
 Checking a candidate against known values.
@@ -17,6 +19,7 @@ the two engines cannot drift apart on *what* counts as verified.
 -/
 
 namespace GenExpr
+public section
 
 /-- Which backend checks the values.
 
@@ -238,4 +241,5 @@ def firstVerified (cfg : VerifyConfig) (ts : List Typing) (points : Array (Array
     if r.accepted then return (some (t, r), tried)
   return (none, tried)
 
+end
 end GenExpr

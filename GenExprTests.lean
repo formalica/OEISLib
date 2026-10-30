@@ -1,3 +1,4 @@
+module
 /-!
 Test harness for GenExpr.
 
@@ -6,6 +7,7 @@ Pure test modules also use `#guard`, which turns a regression into a build error
 -/
 
 namespace GenExprTests
+public section
 
 /-- One failed expectation. -/
 structure Failure where
@@ -34,4 +36,5 @@ def report (suite : String) (rs : Array Result) : IO UInt32 := do
   IO.eprintln s!"{failures.size} failure(s) in {suite}"
   return 1
 
+end
 end GenExprTests

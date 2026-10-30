@@ -64,6 +64,11 @@ The ingest executable walks `oeisdata/seq`, parses every `.seq` file, and popula
 database at `Metadata/oeis.db` (git-ignored, ~360 MB). The generator reads that DB and writes
 `LOEIS/<bucket>/<name>/{Defs,Data}.lean` where every declaration is `sorry`.
 
+`GenExpr`, `GenExprTests`, and `Scripts` use Lean's explicit module system. Their cross-module APIs
+and required runtime/meta imports are documented in [Impl/BuildAndCache.md](Impl/BuildAndCache.md).
+The combined build and runtime checks passed: GenExpr's internal corpus passed 34 checks (one
+Lean-engine-only case skipped), and the template integration checks passed.
+
 ### Generated skeleton shape
 
 `argType` from the OEIS offset:
@@ -200,6 +205,9 @@ per block on every run, so they never go stale.
 ## Commands
 
 ```bash
+lake build GenExpr GenExprTests Scripts
+lake build genexpr-test oeis-ingest oeis-gen oeis-cache oeis-template oeis-template-test
+
 lake build oeis-ingest
 lake exe oeis-ingest [--seq-dir oeisdata/seq] [--db Metadata/oeis.db] [--limit N]
 
@@ -216,7 +224,7 @@ lake exe oeis-template-test      # DB integration test; `lake build Scripts` run
 # `lake exe` replays library warnings on every call; the binary under .lake/build/bin is quieter.
 
 # GenExprParser: the `#guard` suites fail the build, the exe covers the acceptance corpus.
-lake build GenExprTests
+lake build GenExpr GenExprTests
 lake exe genexpr-test [--engine internal|lean|internalThenLean|crossCheck] [--elab-noncomputable]
                       [--timeout MS] [--filter SUBSTRING] [--list]
 lake exe genexpr-test --check-imports   # every declared import list, one child process per set
@@ -256,6 +264,8 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 - **Linter options live in `lakefile.toml`, never in generated files** —
   `weak.linter.unusedVariables = false` and `weak.linter.style.longLine = false`, because the
   skeletons have unused binders (proofs are `sorry`) and very long term lists by construction.
+  The Spec-requested suppression for sorry-declaration warnings is not configured; see
+  [Impl/BuildAndCache.md](Impl/BuildAndCache.md#differences-from-specmd).
 - **Hosting moves to Hugging Face**: `https://huggingface.co/datasets/formalica/lean4oeis`.
   GitHub is dropped (CI in `workflows/` is lost). All 792k `LOEIS/**.lean` files are committed
   raw, despite HF recommending <100k files per repo.
@@ -318,6 +328,10 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 - **Progress is kept in PROGRESS.md. Open items and next steps are written in AGENTS.md. The existing open items list stays here until it is moved.**
 
 ### GenExprParser decisions
+
+- **Lean module visibility**: `GenExpr`, `GenExprTests`, and `Scripts` use `module`; existing
+  cross-module declarations are exported with `public section`, runtime dependencies with
+  `public import`, and compile-time test dependencies with `public meta import`.
 
 - **`GenExpr/` is standalone**: it imports nothing from LOEIS/Scripts, and nothing from Mathlib
   either — Mathlib will be loaded into a scratch environment at runtime by `GenExpr.Verify`.

@@ -1,5 +1,8 @@
-import GenExpr.Analyze
-import GenExpr.Frontend.Raw.Parser
+module
+public import GenExpr.Analyze
+public meta import GenExpr.Analyze
+public import GenExpr.Frontend.Raw.Parser
+public meta import GenExpr.Frontend.Raw.Parser
 
 /-!
 Segmentation: finding the formulas inside a line of prose.
@@ -20,6 +23,7 @@ Fragments that score zero are kept as diagnostics with the reason they were reje
 -/
 
 namespace GenExpr.Raw
+public section
 
 structure SegConfig where
   /-- How many distinct unbound variables a reading may have; normally the target's arity. -/
@@ -128,4 +132,5 @@ def scan (cls : Classifier) (cfg : SegConfig) (s : String) : Scan :=
   let all := candidates ctx cfg
   { input, toks, cls, chosen := cover all toks.size, all }
 
+end
 end GenExpr.Raw

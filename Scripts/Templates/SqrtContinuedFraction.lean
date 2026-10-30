@@ -1,5 +1,8 @@
-import Scripts.OeisTemplate.Recognize
-import OEISLib.Common.SqrtContinuedFraction
+module
+public import Scripts.OeisTemplate.Recognize
+public meta import Scripts.OeisTemplate.Recognize
+public import OEISLib.Common.SqrtContinuedFraction
+public meta import OEISLib.Common.SqrtContinuedFraction
 
 /-!
 # Template `sqrtContinuedFraction`
@@ -18,6 +21,7 @@ Mathlib's `GenContFract`.
 -/
 
 namespace Oeis.Template.SqrtContinuedFraction
+public section
 
 open Recognize
 
@@ -227,4 +231,5 @@ def template : Template where
   selectWhere := "lower(title) LIKE 'numerators of continued fraction convergents to sqrt(%'"
   formalize := formalize
 
+end
 end Oeis.Template.SqrtContinuedFraction

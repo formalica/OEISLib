@@ -1,4 +1,6 @@
-import GenExpr.LeanEngine
+module
+public import GenExpr.LeanEngine
+public meta import GenExpr.LeanEngine
 
 /-!
 The public entry point.
@@ -14,6 +16,7 @@ as `tables` of known points.
 -/
 
 namespace GenExpr
+public section
 
 open GenExpr.Raw
 
@@ -194,4 +197,5 @@ def run (session : LeanEngine.Session) (req : Request) : IO Result :=
           return (← session.typecheck t req.tables).map some }
       req
 
+end
 end GenExpr

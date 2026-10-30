@@ -1,4 +1,5 @@
-import Scripts.OeisIngest.Json
+module
+public import Scripts.OeisIngest.Json
 
 /-!
 Parser for the OEIS "internal format" `.seq` files shipped in `oeisdata/seq`.
@@ -15,12 +16,13 @@ Every line has the shape `%<tag> <A-number> <content>`. The tags used here:
 -/
 
 namespace Oeis
+public section
 
 private def trimStr (s : String) : String := s.trimAscii.toString
 private def trimEndStr (s : String) : String := s.trimAsciiEnd.toString
 
 /-- One program block attached to a sequence, e.g. a `%p` Maple snippet. -/
-structure Program where
+public structure Program where
   /-- `maple`, `mathematica`, or the lowercased `(Lang)` marker of a `%o` block. -/
   language : String
   /-- Originating record tag: `p`, `t`, or `o`. -/
@@ -32,7 +34,7 @@ structure Program where
   deriving Inhabited
 
 /-- Everything the ingest step extracts from a single `.seq` file. -/
-structure Entry where
+public structure Entry where
   name : String
   title : String
   offset : Int
@@ -161,7 +163,8 @@ def parseSeqFile (sourceFile : String) (fallbackName : String) (contents : Strin
   }
 
 /-- Stable identifier of a formula: hex encoding of `String.hash` of its text. -/
-def formulaHash (text : String) : String :=
+public def formulaHash (text : String) : String :=
   Json.toHex (String.hash text).toNat 16
 
+end
 end Oeis

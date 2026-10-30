@@ -1,4 +1,6 @@
-import GenExpr.Types
+module
+public import GenExpr.Types
+public meta import GenExpr.Types
 
 /-!
 GenExpr — a general expression parser.

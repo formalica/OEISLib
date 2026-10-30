@@ -1,6 +1,10 @@
-import Lean
-import GenExpr.Verify
-import GenExpr.Render
+module
+public import Lean
+public meta import Lean
+public import GenExpr.Verify
+public meta import GenExpr.Verify
+public import GenExpr.Render
+public meta import GenExpr.Render
 
 /-!
 Verification by Lean itself.
@@ -25,6 +29,7 @@ The verification policy itself is `GenExpr.runPolicy`, shared with the interpret
 -/
 
 namespace GenExpr.LeanEngine
+public section
 
 open Lean
 
@@ -451,4 +456,5 @@ def catalogueProbes (alts : Array Alt) : Array (Array String × Array (String ×
       | none => groups := groups.push (imports, #[entry])
     return groups
 
+end
 end GenExpr.LeanEngine

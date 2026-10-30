@@ -1,4 +1,6 @@
-import GenExpr.Typed
+module
+public import GenExpr.Typed
+public meta import GenExpr.Typed
 
 /-!
 Rewrites applied to a typed expression before it is either evaluated or printed.
@@ -9,6 +11,7 @@ renderer never see different arithmetic.
 -/
 
 namespace GenExpr
+public section
 
 private def isKey (a : Alt) (k : String) : Bool := a.key == k
 
@@ -118,4 +121,5 @@ partial def simplifyOffsets (v : String) : TExpr → TExpr
       (dv.map (simplifyOffsets v)) ls hs (simplifyOffsets v body) t
   | e => e
 
+end
 end GenExpr

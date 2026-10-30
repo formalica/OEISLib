@@ -1,5 +1,7 @@
+module
 import SQLite
-import Scripts.OeisGen.Render
+public import SQLite.LowLevel
+public import Scripts.OeisGen.Render
 
 /-!
 Generates the per-sequence `Defs.lean` / `Data.lean` skeletons from `Metadata/oeis.db`.
@@ -10,6 +12,7 @@ Generates the per-sequence `Defs.lean` / `Data.lean` skeletons from `Metadata/oe
 -/
 
 namespace Oeis.Gen
+public section
 
 open SQLite
 
@@ -134,6 +137,7 @@ def run (cfg : Config) : IO Unit := do
   let buckets ← writeAggregators cfg
   IO.println s!"Done. files written={written} kept={skipped} buckets={buckets}"
 
+end
 end Oeis.Gen
 
 def main (args : List String) : IO UInt32 := do

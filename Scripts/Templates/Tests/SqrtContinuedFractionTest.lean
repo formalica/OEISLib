@@ -1,4 +1,6 @@
-import Scripts.Templates.SqrtContinuedFraction
+module
+public import Scripts.Templates.SqrtContinuedFraction
+public meta import Scripts.Templates.SqrtContinuedFraction
 
 /-! Recognizer and value regressions for the `sqrtContinuedFraction` template; the Mathlib bridge
 itself is proved in `OEISLib.Common.SqrtContinuedFraction`. -/
@@ -6,6 +8,7 @@ itself is proved in `OEISLib.Common.SqrtContinuedFraction`. -/
 set_option linter.hashCommand false
 
 namespace Oeis.Template.SqrtContinuedFraction.Tests
+public section
 
 #guard parseTitle "Numerators of continued fraction convergents to sqrt(6)." == some 6
 #guard parseTitle "Numerators of continued fraction convergents to sqrt(9)." == none
@@ -88,4 +91,5 @@ private def ordinary (mma : String) : SeqSource :=
 #guard outcome (seqOf "A041006" "Numerators of continued fraction convergents to sqrt(6)."
     #[] "") == none
 
+end
 end Oeis.Template.SqrtContinuedFraction.Tests

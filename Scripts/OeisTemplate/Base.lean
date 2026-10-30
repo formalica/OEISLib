@@ -1,6 +1,9 @@
+module
 import SQLite
+public import SQLite.LowLevel
 import Scripts.OeisIngest.Json
-import Scripts.OeisTemplate.Source
+import Scripts.OeisIngest.Parse
+public import Scripts.OeisTemplate.Source
 
 /-!
 The template interface and its single writer.
@@ -25,6 +28,8 @@ All Lean text is name-free so a generator can re-render it under any names:
 namespace Oeis.Template
 
 open SQLite
+
+public section
 
 inductive LeanKind where
   | prop | computable | nonComputable | thm
@@ -238,4 +243,5 @@ def Candidate.render (c : Candidate) (start stop : Nat) : String :=
   opt "eq statement" c.eqStatement ++ opt "eq proof" c.eqProof ++
   (if c.imports.isEmpty then "" else s!"\n  imports: {", ".intercalate c.imports.toList}")
 
+end
 end Oeis.Template

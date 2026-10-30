@@ -1,7 +1,8 @@
-import Mathlib.Algebra.ContinuedFractions.Computation.Translations
-import Mathlib.Algebra.ContinuedFractions.ContinuantsRecurrence
-import Mathlib.Data.Nat.Sqrt
-import Mathlib.Analysis.SpecialFunctions.Sqrt
+module
+public import Mathlib.Algebra.ContinuedFractions.Computation.Translations
+public import Mathlib.Algebra.ContinuedFractions.ContinuantsRecurrence
+public import Mathlib.Data.Nat.Sqrt
+public import Mathlib.Analysis.SpecialFunctions.Sqrt
 
 /-!
 # Square-root continued-fraction numerators
@@ -13,6 +14,7 @@ invariant to identify the entire coefficient stream. Numerical tests are supplem
 -/
 
 namespace OEISLib.Common.SqrtContinuedFraction
+public section
 
 /-- A numerator of the actual continued fraction, with the first convergent at index zero. -/
 def relation (d n p : Nat) : Prop :=
@@ -488,4 +490,5 @@ theorem program_length (d count : ℕ) (prependOne : Bool) :
     (program d count prependOne).length = count + (if prependOne then 1 else 0) := by
   cases prependOne <;> simp [program]
 
+end
 end OEISLib.Common.SqrtContinuedFraction

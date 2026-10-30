@@ -1,10 +1,13 @@
-import GenExpr.Plan
+module
+public import GenExpr.Plan
+public meta import GenExpr.Plan
 
 /-!
 Planner tests: which definition becomes the goal, what it depends on, and what is rejected.
 -/
 
 namespace GenExprTests.PlanTests
+public section
 
 open GenExpr GenExpr.Raw
 
@@ -102,4 +105,5 @@ A formula with no equation becomes a function of the single name it leaves unbou
 #guard goal [] ["a"] 1 "a(n) = c(n)+1" == "<none>"
 #guard rejects [] ["a"] 1 "a(n) = c(n)+1" == "unresolved name 'c'"
 
+end
 end GenExprTests.PlanTests

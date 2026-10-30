@@ -1,5 +1,8 @@
-import GenExprTests
-import GenExprTests.Cases
+module
+public import GenExprTests
+public meta import GenExprTests
+public import GenExprTests.Cases
+public meta import GenExprTests.Cases
 
 /-!
 Entry point of `lake exe genexpr-test`.
@@ -20,6 +23,7 @@ an imported environment is never freed.
 -/
 
 open GenExpr GenExprTests
+public section
 
 structure Opts where
   filter : Option String := none
@@ -133,3 +137,4 @@ def main (args : List String) : IO UInt32 := do
   -- A Lean evaluation that timed out was abandoned, not stopped, and its thread would keep the
   -- process alive after `main` returns.
   IO.Process.exit code.toUInt8
+end

@@ -1,7 +1,9 @@
+module
 import SQLite
-import Scripts.OeisIngest.Db
-import Scripts.OeisTemplate.Base
-import Scripts.Templates.Registry
+public import SQLite.LowLevel
+public import Scripts.OeisIngest.Db
+public import Scripts.OeisTemplate.Base
+public import Scripts.Templates.Registry
 
 /-!
 Generic template runner: applies a named template to families of OEIS sequences and records the
@@ -19,6 +21,7 @@ Without `--force`, sequences that already have items from this template are skip
 -/
 
 namespace Oeis.Template.Runner
+public section
 
 open SQLite
 
@@ -146,6 +149,7 @@ def run (cfg : Config) : IO UInt32 := do
   IO.println s!"Done. ok={nOk} skipped={nSkip} failed={nFail}"
   return if nFail == 0 then 0 else 1
 
+end
 end Oeis.Template.Runner
 
 def main (args : List String) : IO UInt32 := do

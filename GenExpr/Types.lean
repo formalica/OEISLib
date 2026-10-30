@@ -1,3 +1,4 @@
+module
 /-!
 Core data types shared by every stage of GenExpr.
 
@@ -6,6 +7,7 @@ Mathlib or on the OEIS project: the parser is a standalone library.
 -/
 
 namespace GenExpr
+public section
 
 /-! ## Source locations -/
 
@@ -214,4 +216,5 @@ instance : ToString Reject where
 
 end Reject
 
+end
 end GenExpr

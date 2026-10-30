@@ -1,10 +1,13 @@
-import GenExpr.Frontend.Raw.Segmenter
+module
+public import GenExpr.Frontend.Raw.Segmenter
+public meta import GenExpr.Frontend.Raw.Segmenter
 
 /-!
 Segmenter tests: which stretches of a line are formulas, and why the rest is not.
 -/
 
 namespace GenExprTests.SegmenterTests
+public section
 
 open GenExpr GenExpr.Raw
 
@@ -97,4 +100,5 @@ A lone name, and equally a bare call, are not formulas. -/
 #guard spans [] [] "Hervé: n^2+1" == "8..13"
 #guard frags [] [] "Hervé: n^2+1" == "n^2+1"
 
+end
 end GenExprTests.SegmenterTests

@@ -1,5 +1,8 @@
-import GenExpr.Infer
-import GenExpr.Normalize
+module
+public import GenExpr.Infer
+public meta import GenExpr.Infer
+public import GenExpr.Normalize
+public meta import GenExpr.Normalize
 
 /-!
 Printing typed expressions as Lean source.
@@ -19,6 +22,7 @@ re-rendered under a different name.
 -/
 
 namespace GenExpr
+public section
 
 /-- Placeholder standing for the name of the definition being built. -/
 def selfToken : String := "«self»"
@@ -260,4 +264,5 @@ def renderDef (st : RenderStyle) (t : Typing) (name : String)
       s!"where\n  go : {goTy}\n    | 0{wild} => {lit junk}\n" ++
       s!"    | fuel + 1{pats} => {baseChain names patched inner}"
 
+end
 end GenExpr

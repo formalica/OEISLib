@@ -1,4 +1,6 @@
-import Scripts.OeisTemplate.Recognize
+module
+public import Scripts.OeisTemplate.Recognize
+public meta import Scripts.OeisTemplate.Recognize
 
 /-!
 # Template `walkN3`
@@ -27,6 +29,7 @@ Private flags: `--table-max=K` (verify `K+1` values instead of the `Table` range
 -/
 
 namespace Oeis.Template.WalkN3
+public section
 
 open Recognize
 
@@ -291,4 +294,5 @@ def template : Template where
   flags := #["--table-max", "--check-cap"]
   formalize := formalize
 
+end
 end Oeis.Template.WalkN3

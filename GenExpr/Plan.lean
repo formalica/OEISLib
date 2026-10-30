@@ -1,4 +1,6 @@
-import GenExpr.Frontend.Raw.Segmenter
+module
+public import GenExpr.Frontend.Raw.Segmenter
+public meta import GenExpr.Frontend.Raw.Segmenter
 
 /-!
 Scope resolution: turning chosen fragments into definitions the typer can work on.
@@ -16,6 +18,7 @@ parts.
 -/
 
 namespace GenExpr
+public section
 
 open GenExpr.Raw
 
@@ -340,4 +343,5 @@ def planProps (sc : Scan) (arity : Nat) (known : String → Bool) :
       if reason != .bareAtom then rejected := rejected.push (seg.span, reason)
   return (groups, rejected)
 
+end
 end GenExpr

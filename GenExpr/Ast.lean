@@ -1,4 +1,6 @@
-import GenExpr.Types
+module
+public import GenExpr.Types
+public meta import GenExpr.Types
 
 /-!
 Syntax-neutral abstract syntax tree.
@@ -15,6 +17,7 @@ Two deliberate absences:
 -/
 
 namespace GenExpr
+public section
 
 inductive BinOp where
   | add | sub | mul | div | pow | mod
@@ -184,4 +187,5 @@ instance : ToString Ast := ⟨format⟩
 
 end Ast
 
+end
 end GenExpr

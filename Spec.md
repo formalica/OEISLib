@@ -220,12 +220,12 @@ lake exe oeis-cache get     # restore .lake/build from the archive (`lake build`
 
 # Generator — `lake exe oeis-gen`
 
-- Reads `Metadata/oeis.db` and writes the per-sequence `Data.lean`, `Defs.lean`, `Equiv_<hash>.lean`, `Basic_<hash>.lean` files. 
+- Reads `Metadata/oeis.db` and writes the per-sequence `Data.lean`, `Defs.lean`, `Equiv_<hash>.lean`, `Basic_<hash>.lean` files in OEISLib/Axxx/Axxxxxx/ dir. 
 - Skeleton content is exactly the file shape specified in [OEISLib.md](OEISLib.md).
 - should read `sequences` and `formalization_item` tables from database and generate all files,
-- do not add many comments, just original text is sufficient
-
-
+- comments should contain only original text, no any other comment is needed. note .seq files can contain different comments,formulas and programs which formalization is exact same, so one formalized formula can have few original texts and we need to mention all of them in comments 
+- genrator should be generic and it should not inspect lean code stored in `formalization_item` table and should not do any processing based on content of lean code, it should take that code as is and generate the necessary files accordingly, so template scripts and parsers should generate that lean code so that generator can just copy them in final files without any chnage and preprocessing(only exception can be recursive defintions)  
+- lean files should use lean module system https://lean-lang.org/doc/reference/latest/Source-Files-and-Modules/
 
 ```
 lake exe oeis-gen --all 

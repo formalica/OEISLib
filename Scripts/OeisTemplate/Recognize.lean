@@ -1,4 +1,6 @@
-import Scripts.OeisTemplate.Base
+module
+public import Scripts.OeisTemplate.Base
+public meta import Scripts.OeisTemplate.Base
 
 /-!
 Shared toolkit for template authors: whitespace-tolerant matching over a character array,
@@ -6,6 +8,7 @@ splitting a section into recognizable lines, and comparing computed values with 
 -/
 
 namespace Oeis.Template.Recognize
+public section
 
 def chars (s : String) : Array Char := s.toList.toArray
 
@@ -155,4 +158,5 @@ def checkPrefix (computed expected : Array Nat) : Except String Nat := do
         {computed[i]!}, OEIS data says {expected[i]!}"
   return n
 
+end
 end Oeis.Template.Recognize

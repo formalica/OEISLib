@@ -1,4 +1,6 @@
-import GenExpr.Frontend.Raw.Parser
+module
+public import GenExpr.Frontend.Raw.Parser
+public meta import GenExpr.Frontend.Raw.Parser
 
 /-!
 Parser tests: precedence, associativity, and the readings offered where the surface syntax is
@@ -9,6 +11,7 @@ when nothing else competes.
 -/
 
 namespace GenExprTests.ParserTests
+public section
 
 open GenExpr GenExpr.Raw
 
@@ -144,4 +147,5 @@ trailing `+ 1` lands outside the sum. -/
 #guard fullSpan [] "n+1" == "0..3"
 #guard fullSpan [] "(n+1)(n+2)" == "0..10"
 
+end
 end GenExprTests.ParserTests

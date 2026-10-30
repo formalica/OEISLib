@@ -1,3 +1,4 @@
+module
 import OEISLib.Common.SqrtContinuedFraction
 
 /-! Kernel-checked applications of the general bridge, separate from finite value tests. -/

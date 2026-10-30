@@ -1,5 +1,8 @@
-import GenExpr.Registry
-import GenExpr.Ast
+module
+public import GenExpr.Registry
+public meta import GenExpr.Registry
+public import GenExpr.Ast
+public meta import GenExpr.Ast
 
 /-!
 Typed expressions.
@@ -10,6 +13,7 @@ a leaf or an opaque result.
 -/
 
 namespace GenExpr
+public section
 
 inductive TExpr where
   /-- A numeral, elaborated directly at `ty` rather than cast into it. -/
@@ -101,4 +105,5 @@ instance : ToString TExpr := ⟨format⟩
 
 end TExpr
 
+end
 end GenExpr

@@ -1,4 +1,5 @@
-import Mathlib.Tactic
+module
+public import Mathlib.Tactic
 
 /-!
 # Coxeter growth series — complete-graph diagram
@@ -35,6 +36,7 @@ PARI `Vec` and Magma `PowerSeriesRing` all transcribe to `coeffsUpTo`.
 -/
 
 namespace OEISLib.Common.Coxeter
+public section
 
 /-! ## Parameters -/
 
@@ -112,4 +114,5 @@ theorem mem_coeffsUpTo {g r K x : Nat} :
   · rintro ⟨n, hn, rfl⟩
     exact ⟨n, by omega, rfl⟩
 
+end
 end OEISLib.Common.Coxeter

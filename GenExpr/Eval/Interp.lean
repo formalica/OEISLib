@@ -1,5 +1,8 @@
-import GenExpr.Render
-import Std.Data.HashMap
+module
+public import GenExpr.Render
+public meta import GenExpr.Render
+public import Std.Data.HashMap
+public meta import Std.Data.HashMap
 
 /-!
 Exact evaluator for typed expressions over `ℕ`, `ℤ` and `ℚ`.
@@ -20,6 +23,7 @@ result *unknown*, so the point proves nothing rather than counting against the f
 -/
 
 namespace GenExpr
+public section
 
 inductive Val where
   | nat (n : Nat)
@@ -450,4 +454,5 @@ def evalAt (ctx : EvalCtx) (args : Array Int) (budget : Nat)
     | .ok v => if st.usedUnknown then .unknown else .ok v
   (res, st.memo)
 
+end
 end GenExpr

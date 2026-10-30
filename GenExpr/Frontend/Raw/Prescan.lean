@@ -1,4 +1,6 @@
-import GenExpr.Lexer
+module
+public import GenExpr.Lexer
+public meta import GenExpr.Lexer
 
 /-!
 Pre-parse scan for definition heads.
@@ -10,6 +12,7 @@ a cheap token-pattern scan runs first and hands the parser a classifier.
 -/
 
 namespace GenExpr.Raw
+public section
 
 /-- How the parser should read a bare identifier. -/
 inductive SymClass where
@@ -123,4 +126,5 @@ def isKnown (c : Classifier) (locals : Array String) (name : String) : Bool :=
 
 end Classifier
 
+end
 end GenExpr.Raw

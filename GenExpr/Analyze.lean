@@ -1,5 +1,8 @@
-import GenExpr.Ast
-import GenExpr.Frontend.Raw.Prescan
+module
+public import GenExpr.Ast
+public meta import GenExpr.Ast
+public import GenExpr.Frontend.Raw.Prescan
+public meta import GenExpr.Frontend.Raw.Prescan
 
 /-!
 Name analysis of a parsed fragment.
@@ -16,6 +19,7 @@ formalization. Three properties decide it:
 -/
 
 namespace GenExpr
+public section
 
 open GenExpr.Raw
 
@@ -125,4 +129,5 @@ partial def appliedHeads (e : Ast) : Array String :=
   e.children.foldl (fun acc c => (appliedHeads c).foldl
     (fun a n => if a.contains n then a else a.push n) acc) here
 
+end
 end GenExpr

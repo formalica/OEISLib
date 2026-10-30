@@ -1,3 +1,4 @@
+module
 /-!
 Renders the `Defs.lean` / `Data.lean` skeletons for a single OEIS sequence.
 
@@ -6,6 +7,7 @@ sequence will end up with a computable definition or a propositional one.
 -/
 
 namespace Oeis.Gen
+public section
 
 /-- Shape of the index type, derived from the OEIS offset. -/
 inductive ArgKind where
@@ -253,4 +255,5 @@ def renderData (libName : String) (s : SeqInfo) : String :=
     "\nend ", ns, "\n"
   ]
 
+end
 end Oeis.Gen

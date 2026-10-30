@@ -1,4 +1,6 @@
-import GenExpr.Types
+module
+public import GenExpr.Types
+public meta import GenExpr.Types
 
 /-!
 Tokenizer for the raw syntax.
@@ -13,6 +15,7 @@ Two properties are load-bearing downstream and must not be "simplified" away:
 -/
 
 namespace GenExpr
+public section
 
 /-- The input string together with the char/byte index tables needed for exact spans. -/
 structure Input where
@@ -189,4 +192,5 @@ def run (s : String) : Input × Array Token :=
 
 end Lexer
 
+end
 end GenExpr

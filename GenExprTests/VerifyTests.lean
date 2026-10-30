@@ -1,4 +1,6 @@
-import GenExpr.Api
+module
+public import GenExpr.Api
+public meta import GenExpr.Api
 
 /-!
 Verification tests: raw text plus known values in, a checked Lean definition out.
@@ -8,10 +10,11 @@ produces the listed values.
 -/
 
 namespace GenExprTests.VerifyTests
+public section
 
 open GenExpr
 
-private def N : FnTy := { args := [.nat], ret := .nat }
+public def N : FnTy := { args := [.nat], ret := .nat }
 
 /-- Points indexed from zero, as a sequence's first terms. -/
 private def seq (vs : List Int) : Array (Array Int × Int) :=
@@ -196,4 +199,5 @@ private def stmts (input : String) (n : Nat)
                   verify := { engine := .internal } }).items[0]!.decl
   == "theorem statement : ∀ n : ℕ, n > 2 → n ^ 2 > 2 * n := by\n  sorry"
 
+end
 end GenExprTests.VerifyTests

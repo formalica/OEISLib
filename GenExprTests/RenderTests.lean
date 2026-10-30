@@ -1,4 +1,6 @@
-import GenExpr.Render
+module
+public import GenExpr.Render
+public meta import GenExpr.Render
 
 /-!
 End-to-end tests: raw text in, Lean source out.
@@ -9,6 +11,7 @@ to produce the sequence it claims.
 -/
 
 namespace GenExprTests.RenderTests
+public section
 
 open GenExpr GenExpr.Raw
 
@@ -138,4 +141,5 @@ A big operator's body extends to the right, so one used as an operand is always 
 #guard !((typings [] ["g"] R "g = sum{k>=1} 1/k^2").head!).computable
 #guard !((typings [] ["res"] R "res = sin(2*pi)*e").head!).computable
 
+end
 end GenExprTests.RenderTests

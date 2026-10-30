@@ -1,4 +1,6 @@
-import GenExpr.Lexer
+module
+public import GenExpr.Lexer
+public meta import GenExpr.Lexer
 
 /-!
 Lexer tests.
@@ -7,6 +9,7 @@ These are `#guard`s, so a regression fails `lake build` rather than only `lake e
 -/
 
 namespace GenExprTests.LexerTests
+public section
 
 open GenExpr
 
@@ -78,4 +81,5 @@ punctuation is a single barrier. -/
 #guard spanOf "é + 1" 2 == "5..6"
 #guard (Lexer.run "é + 1").1.extract 2 5 == "+ 1"
 
+end
 end GenExprTests.LexerTests

@@ -1,4 +1,5 @@
-import Mathlib.Tactic
+module
+public import Mathlib.Tactic
 
 /-!
 # Primes in a residue class
@@ -32,6 +33,7 @@ propositional characterization used in the generated files.
 -/
 
 namespace OEISLib.Common.Residue
+public section
 
 /-! ## Small list helpers -/
 
@@ -136,6 +138,7 @@ def selectFrom (l : List Nat) (a m : Nat) : List Nat := l.filter (isMember a m)
 
 /-- All members of the residue class `≤ bound`, increasing. Transcription of Magma
 `[p: p in PrimesUpTo(<B>) | p mod <m> eq <a>]`. -/
+@[expose]
 def membersUpTo (a m bound : Nat) : List Nat := selectFrom (primesUpTo bound) a m
 
 /-- `membersUpTo` as a single filter over the naturals below `bound + 1`. -/
@@ -320,4 +323,5 @@ theorem nthIn_spec {a m n bound : Nat}
   rw [key]
   exact hc
 
+end
 end OEISLib.Common.Residue

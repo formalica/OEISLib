@@ -1,4 +1,5 @@
-import Scripts.OeisIngest.Json
+module
+public import Scripts.OeisIngest.Json
 
 /-!
 Packs and restores the compiled `.lake/build` artifacts so that a fresh checkout does not have
@@ -15,6 +16,7 @@ dropped: they account for ~94% of the build directory and Lake rewrites them on 
 -/
 
 namespace Oeis.Cache
+public section
 
 structure Config where
   buildDir : System.FilePath := ".lake/build"
@@ -199,6 +201,7 @@ where
     | "--force" :: rest, cfg => go rest { cfg with force := true }
     | arg :: _, _ => .error s!"unrecognized argument '{arg}'"
 
+end
 end Oeis.Cache
 
 def main (args : List String) : IO UInt32 := do

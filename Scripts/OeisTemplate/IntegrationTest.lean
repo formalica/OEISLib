@@ -1,6 +1,7 @@
+module
 import SQLite
-import Scripts.OeisIngest.Db
-import Scripts.OeisTemplate.Base
+public import Scripts.OeisIngest.Db
+public import Scripts.OeisTemplate.Base
 
 /-!
 Integration test for the template base interface and the schema migration, on throwaway
@@ -129,7 +130,7 @@ private def testMigration (dir : System.FilePath) : IO Unit := do
       FROM formalization_item") == "llm/noncomputable/2/7") "legacy item keeps its data"
     check ((← text db "SELECT lean_code FROM formalization_item") == "def formula := 1") "lean_code kept"
 
-def main : IO UInt32 := do
+public def main : IO UInt32 := do
   IO.FS.withTempDir fun dir => do
     testPublish dir
     testMigration dir

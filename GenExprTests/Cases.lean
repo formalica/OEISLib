@@ -1,5 +1,8 @@
-import GenExpr.Api
-import GenExprTests
+module
+public import GenExpr.Api
+public meta import GenExpr.Api
+public import GenExprTests
+public meta import GenExprTests
 
 /-!
 The acceptance corpus: every "important corner case" and "multiplication corner case" from the
@@ -9,6 +12,7 @@ Kept separate from the `#guard` suites so the runner can report coverage in one 
 -/
 
 namespace GenExprTests.Cases
+public section
 
 open GenExpr
 
@@ -219,4 +223,5 @@ def runCase (c : Case) : GenExprTests.Result := judge c (analyze (request c .int
 def runCaseWith (s : LeanEngine.Session) (engine : Engine) (c : Case) : IO GenExprTests.Result :=
   return judge c (← run s (request c engine))
 
+end
 end GenExprTests.Cases

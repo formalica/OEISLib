@@ -1,5 +1,8 @@
-import Scripts.OeisTemplate.Recognize
-import OEISLib.Common.Coxeter
+module
+public import Scripts.OeisTemplate.Recognize
+public meta import Scripts.OeisTemplate.Recognize
+public import OEISLib.Common.Coxeter
+public meta import OEISLib.Common.Coxeter
 
 /-!
 # Template `coxeter`
@@ -21,6 +24,7 @@ definition pointwise. Private flag: `--check-cap=K` (compare only the first `K` 
 -/
 
 namespace Oeis.Template.Coxeter
+public section
 
 open Recognize
 
@@ -206,4 +210,5 @@ def template : Template where
   flags := #["--check-cap"]
   formalize := formalize
 
+end
 end Oeis.Template.Coxeter

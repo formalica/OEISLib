@@ -1,5 +1,8 @@
-import Scripts.OeisTemplate.Recognize
-import OEISLib.Common.Residue
+module
+public import Scripts.OeisTemplate.Recognize
+public meta import Scripts.OeisTemplate.Recognize
+public import OEISLib.Common.Residue
+public meta import OEISLib.Common.Residue
 
 /-!
 # Template `primeCongruent`
@@ -20,6 +23,7 @@ Private flag: `--check-cap=K` (compare only the first `K` terms).
 -/
 
 namespace Oeis.Template.PrimeCongruent
+public section
 
 open Recognize
 
@@ -212,4 +216,5 @@ def template : Template where
   flags := #["--check-cap"]
   formalize := formalize
 
+end
 end Oeis.Template.PrimeCongruent
