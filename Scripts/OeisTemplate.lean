@@ -12,12 +12,15 @@ result in `formalization_item`.
     lake exe oeis-template <template> --all
     lake exe oeis-template <template> --bucket A147
     lake exe oeis-template <template> --seq A147999 [--seq ...]
-                           [--db PATH] [--force] [--dry-run] [--limit N] [--<template flag>=V]
+                           [--db PATH] [--force] [--dry-run] [--limit N] [--verbose] [--<template flag>=V]
 
 The runner owns selection, loading (from the database, never from `oeisdata/`), the transaction
 and reporting. A template only maps a loaded sequence to candidates; `Oeis.Template.publish`
-checks every candidate's original text against the stored sections before anything is written.
-Without `--force`, sequences that already have items from this template are skipped.
+checks every candidate's original texts against the stored sections before anything is written.
+Without `--force`, sequences that already have items from this template are skipped. A `scan`
+template (see `TemplateKind`) selects many sequences that mostly yield nothing: its skips are only
+counted unless `--verbose` is given, and with `--force` a sequence it no longer matches loses its
+earlier items.
 -/
 
 namespace Oeis.Template.Runner
@@ -33,6 +36,7 @@ structure Config where
   all : Bool := false
   force : Bool := false
   dryRun : Bool := false
+  verbose : Bool := false
   limit : Option Nat := none
   extras : List String := []
 
@@ -51,6 +55,7 @@ where
     | "--all" :: rest, cfg => go rest { cfg with all := true }
     | "--force" :: rest, cfg => go rest { cfg with force := true }
     | "--dry-run" :: rest, cfg => go rest { cfg with dryRun := true }
+    | "--verbose" :: rest, cfg => go rest { cfg with verbose := true }
     | "--limit" :: v :: rest, cfg =>
       match v.toNat? with
       | some n => go rest { cfg with limit := some n }
@@ -127,16 +132,20 @@ def run (cfg : Config) : IO UInt32 := do
     match tpl.formalize cfg.extras src with
     | .skip msg =>
       nSkip := nSkip + 1
-      IO.println s!"[{name}] skipped: {msg}"
+      if tpl.kind == .scan && cfg.force && !cfg.dryRun then
+        discard <| publish db src producer false #[]
+      if tpl.kind == .family || cfg.verbose then
+        IO.println s!"[{name}] skipped: {msg}"
     | .fail msg =>
       nFail := nFail + 1
       IO.eprintln s!"[{name}] FAILED: {msg}"
     | .items cs =>
       let report ← publish db src producer cfg.dryRun cs
       if cfg.dryRun then
-        for (c, start, stop) in report.accepted do
-          IO.println s!"[{name}] {c.render start stop}"
-      let langs := ", ".intercalate (report.accepted.map fun (c, _, _) => c.language).toList
+        for a in report.accepted do
+          IO.println s!"[{name}] {a.render}"
+      let langs := ", ".intercalate
+        (report.accepted.map fun a => "+".intercalate (a.placed.map (·.src.language)).toList).toList
       if report.rejected.isEmpty then
         nOk := nOk + 1
         IO.println s!"[{name}] ok: {report.accepted.size} item(s) ({langs})"
@@ -152,11 +161,11 @@ def run (cfg : Config) : IO UInt32 := do
 end
 end Oeis.Template.Runner
 
-def main (args : List String) : IO UInt32 := do
+public def main (args : List String) : IO UInt32 := do
   match Oeis.Template.Runner.parseArgs args with
   | .error msg =>
     IO.eprintln s!"error: {msg}"
     IO.eprintln "usage: lake exe oeis-template <template> (--all | [--bucket A147]... [--seq A147999]...)"
-    IO.eprintln "       [--db PATH] [--force] [--dry-run] [--limit N] [--<template flag>=V]"
+    IO.eprintln "       [--db PATH] [--force] [--dry-run] [--limit N] [--verbose] [--<template flag>=V]"
     return 1
   | .ok cfg => Oeis.Template.Runner.run cfg

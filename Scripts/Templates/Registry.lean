@@ -1,5 +1,6 @@
 module
 public import Scripts.Templates.Coxeter
+public import Scripts.Templates.LinearRecurrence
 public import Scripts.Templates.PrimeCongruent
 public import Scripts.Templates.SqrtContinuedFraction
 public import Scripts.Templates.WalkN3
@@ -14,7 +15,8 @@ public section
 
 /-- All available templates. -/
 def templates : Array Template :=
-  #[WalkN3.template, PrimeCongruent.template, SqrtContinuedFraction.template, Coxeter.template]
+  #[WalkN3.template, PrimeCongruent.template, SqrtContinuedFraction.template, Coxeter.template,
+    LinearRecurrence.template]
 
 /-- Looks a template up by (case-sensitive) name. -/
 def findTemplate? (name : String) : Option Template :=

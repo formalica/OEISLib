@@ -61,7 +61,7 @@ private def seqOf (name title : String) (terms : Array String) (mma : String) : 
 
 private def outcome (src : SeqSource) : Option (Nat × List String) :=
   match formalize [] src with
-  | .items cs => some (cs.size, (cs.map (·.language)).toList)
+  | .items cs => some (cs.size, (cs.map fun c => c.sources[0]!.language).toList)
   | _ => none
 
 private def ordinary (mma : String) : SeqSource :=

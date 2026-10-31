@@ -56,18 +56,23 @@ class Region:
     label: str
 
 
-def _regions(block: str, items: list[sqlite3.Row], gaps: list[sqlite3.Row]) -> list[Region]:
+def _regions(block: str, spans: list[sqlite3.Row], gaps: list[sqlite3.Row]) -> list[Region]:
+    """One region per source text; all sources of one item share a colour."""
     regions: list[Region] = []
-    for n, item in enumerate(items):
-        start, end = item["span_start"], item["span_end"]
+    colour_of: dict[int, str] = {}
+    for span in spans:
+        start, end = span["span_start"], span["span_end"]
         if start is None or end is None or end <= start:
             continue
+        colour = colour_of.setdefault(
+            span["item_id"], PALETTE[len(colour_of) % len(PALETTE)]
+        )
         regions.append(
             Region(
                 max(0, start),
                 min(len(block), end),
-                PALETTE[n % len(PALETTE)],
-                f"{item['formula_hash']} {item['status']}",
+                colour,
+                f"{span['formula_hash']} {span['status']}",
             )
         )
     for gap in gaps:
@@ -98,7 +103,7 @@ def paint_block(block: str, regions: list[Region], paint: Painter) -> str:
 
 def show_sequence(
     programs: list[sqlite3.Row],
-    items: list[sqlite3.Row],
+    spans: list[sqlite3.Row],
     gaps: list[sqlite3.Row],
     oeis_name: str,
     paint: Painter,
@@ -108,7 +113,7 @@ def show_sequence(
     for program in programs:
         source_hash = program["hash"]
         block = program["text"]
-        block_items = [i for i in items if i["source_hash"] == source_hash]
+        block_items = [s for s in spans if s["source_hash"] == source_hash]
         block_gaps = [g for g in gaps if g["source_hash"] == source_hash]
         regions = _regions(block, block_items, block_gaps)
         if not regions:
@@ -173,6 +178,7 @@ def show_history(history: list, paint: Painter, limit: int) -> None:
 def show_batch(
     batch: sqlite3.Row,
     items: list[sqlite3.Row],
+    sources: dict[int, list[sqlite3.Row]],
     gaps: list[sqlite3.Row],
     history: list,
     paint: Painter,
@@ -190,9 +196,12 @@ def show_batch(
     print(paint(f"\nitems ({len(items)})", BOLD))
     for item in items:
         colour = "\033[38;5;46m" if item["status"] == STATUS_VERIFIED else RED
+        spans = ", ".join(
+            f"[{s['span_start']}:{s['span_end']}]" for s in sources.get(item["id"], [])
+        )
         head = (
             f"  {item['oeis_name']} {item['formula_hash']} "
-            f"[{item['span_start']}:{item['span_end']}] {item['arg_kind']}"
+            f"{spans} {item['arg_kind']}"
             f"{'' if item['lean_kind'] != 'noncomputable' else ' non-computable'}"
         )
         print(paint(head, colour) + f"  {item['status']}")
@@ -202,9 +211,10 @@ def show_batch(
             print(f"      verified terms: {item['verified_upto']}")
         if item["notes"]:
             print(f"      note: {item['notes']}")
-        if item["original_text"]:
-            print("      original:")
-            print("        " + item["original_text"][:limit].replace("\n", "\n        "))
+        for source in sources.get(item["id"], []):
+            if source["original_text"]:
+                print(f"      original ({source['language']}):")
+                print("        " + source["original_text"][:limit].replace("\n", "\n        "))
         if item["lean_code"]:
             print("      lean_code:")
             print("        " + item["lean_code"][:limit].replace("\n", "\n        "))

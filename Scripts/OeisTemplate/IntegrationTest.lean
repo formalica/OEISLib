@@ -32,8 +32,8 @@ private def columns (db : SQLite) (table : String) : IO (Array String) := do
   return out
 
 private def cand (language originalText : String) (kind : LeanKind := .computable) : Candidate :=
-  { language, originalText, leanKind := kind, leanType := "Nat → Nat", leanCode := "fun n => n",
-    verifiedUpto := 3 }
+  { sources := #[{ language, originalText }], leanKind := kind, leanType := "Nat → Nat",
+    leanCode := "fun n => n", verifiedUpto := 3 }
 
 /-- A formula containing JSON metacharacters, to exercise the round trip through the database. -/
 private def tricky : String := "a(n) = \"x\" \\ n"
@@ -61,30 +61,50 @@ private def testPublish (dir : System.FilePath) : IO Unit := do
                 cand Section.formula tricky,
                 cand "pari" "a(n)=n+1"]
   let bad := #[cand Section.formula "c(n) = 3*n", cand "pari" "not in the block"]
-  let r ← publish db src producer false (good ++ bad)
-  check (r.accepted.size == 5 && r.rejected.size == 2) "accepts backed candidates, rejects the rest"
-  check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 5) "five rows written"
-  check ((← text db "SELECT original_text FROM formalization_item WHERE language = 'formula'
-    AND span_start = 14") == tricky) "span points at the quoted text"
-  check ((← text db "SELECT source_hash FROM formalization_item WHERE language = 'pari'") == "HASH")
-    "program items keep program.hash as source_hash"
+  -- one formalization stated in two places, listed in the "wrong" order
+  let both : Candidate :=
+    { cand "pari" "a(n)=n+1" with
+      sources := #[{ language := "pari", originalText := "a(n)=n+1" },
+                   { language := Section.formula, originalText := tricky }] }
+  let r ← publish db src producer false (good ++ #[both] ++ bad)
+  check (r.accepted.size == 6 && r.rejected.size == 2) "accepts backed candidates, rejects the rest"
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 6) "six items written"
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_source") == 7) "seven source rows written"
+  check ((← text db "SELECT original_text FROM formalization_source WHERE language = 'formula'
+    AND span_start = 14 LIMIT 1") == tricky) "span points at the quoted text"
+  check ((← text db "SELECT source_hash FROM formalization_source WHERE language = 'pari' LIMIT 1")
+    == "HASH") "program sources keep program.hash as source_hash"
   check ((← scalar db "SELECT COUNT(*) FROM sequence s JOIN formalization_item f
-    ON f.id = s.main_item_id WHERE f.lean_kind = 'computable' AND f.language = 'maindef'") == 1)
-    "main_item_id points at the computable maindef"
+    ON f.id = s.main_item_id JOIN formalization_source o ON o.item_id = f.id AND o.ord = 0
+    WHERE f.lean_kind = 'computable' AND o.language = 'maindef'") == 1)
+    "main_item_id points at the computable item whose first source is the title"
+  -- the two-source item: canonical order, hash of the joined texts
+  check ((← text db "SELECT group_concat(language, ',') FROM (SELECT language FROM formalization_source
+    WHERE item_id = (SELECT item_id FROM formalization_source GROUP BY item_id HAVING COUNT(*) = 2)
+    ORDER BY ord)") == "formula,pari") "sources are stored in canonical order"
+  check ((← text db "SELECT formula_hash FROM formalization_item WHERE id =
+    (SELECT item_id FROM formalization_source GROUP BY item_id HAVING COUNT(*) = 2)")
+    == formulaHash (tricky ++ "\n" ++ "a(n)=n+1")) "item hash is the hash of its joined texts"
   -- re-publishing is idempotent
-  let _ ← publish db src producer false good
-  check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 5) "upsert does not duplicate"
+  let _ ← publish db src producer false (good ++ #[both])
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 6) "upsert does not duplicate"
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_source") == 7)
+    "upsert does not duplicate sources"
   -- a dry run writes nothing, not even deletions
   let _ ← publish db src producer true #[cand Section.maindef "Number of groups of order n."]
-  check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 5) "dry run leaves the table alone"
-  -- other producers are never touched; this producer's stale rows are dropped
-  db.exec "INSERT INTO formalization_item (oeis_name, producer, language, formula_hash)
-    VALUES ('A000001', 'llm', 'pari', 'deadbeef');"
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 6) "dry run leaves the table alone"
+  -- other producers are never touched; this producer's stale rows are dropped with their sources
+  db.exec "INSERT INTO formalization_item (oeis_name, producer, formula_hash)
+    VALUES ('A000001', 'llm', 'deadbeef');
+    INSERT INTO formalization_source (item_id, ord, language, original_text)
+    VALUES (last_insert_rowid(), 0, 'pari', 'x');"
   let _ ← publish db src producer false #[cand Section.maindef "Number of groups of order n."]
   check ((← scalar db "SELECT COUNT(*) FROM formalization_item WHERE producer = 'llm'") == 1)
     "other producers untouched"
   check ((← scalar db "SELECT COUNT(*) FROM formalization_item WHERE producer = 'template:test'") == 1)
     "stale items of the producer removed"
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_source") == 2)
+    "sources of removed items are removed too"
 
 private def testMigration (dir : System.FilePath) : IO Unit := do
   let path := dir / "legacy.db"
@@ -103,22 +123,34 @@ private def testMigration (dir : System.FilePath) : IO Unit := do
       line_count INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'STATUS_UNKNOWN',
       PRIMARY KEY (oeis_name, language, block_index));
     CREATE TABLE formalization_item (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, batch_id INTEGER NOT NULL, oeis_name TEXT NOT NULL,
-      language TEXT NOT NULL DEFAULT 'maple', source_hash TEXT NOT NULL DEFAULT '',
+      id INTEGER PRIMARY KEY AUTOINCREMENT, oeis_name TEXT NOT NULL,
+      producer TEXT NOT NULL DEFAULT 'llm', producer_params TEXT NOT NULL DEFAULT '{}',
+      batch_id INTEGER, language TEXT NOT NULL DEFAULT 'maple',
+      block_index INTEGER NOT NULL DEFAULT 0, source_hash TEXT NOT NULL DEFAULT '',
       formula_hash TEXT NOT NULL, original_text TEXT NOT NULL DEFAULT '', span_start INTEGER,
-      span_end INTEGER, computable INTEGER NOT NULL DEFAULT 1, arg_kind TEXT NOT NULL DEFAULT '',
-      lean_code TEXT NOT NULL DEFAULT '', lean_file TEXT NOT NULL DEFAULT '',
-      check_file TEXT NOT NULL DEFAULT '', depends_on TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'STATUS_UNKNOWN', failure_kind TEXT NOT NULL DEFAULT '',
-      failure_points TEXT NOT NULL DEFAULT '[]', compiler_output TEXT NOT NULL DEFAULT '',
-      verified_upto INTEGER NOT NULL DEFAULT 0, attempt INTEGER NOT NULL DEFAULT 1,
+      span_end INTEGER, lean_kind TEXT NOT NULL DEFAULT 'computable',
+      arg_kind TEXT NOT NULL DEFAULT '', lean_type TEXT NOT NULL DEFAULT '',
+      lean_code TEXT NOT NULL DEFAULT '', imports TEXT NOT NULL DEFAULT '[]',
+      aux_code TEXT NOT NULL DEFAULT '', eq_statement TEXT NOT NULL DEFAULT '',
+      eq_proof TEXT NOT NULL DEFAULT '', data_eq_proof TEXT, data_eq_aux TEXT,
+      lean_file TEXT NOT NULL DEFAULT '', check_file TEXT NOT NULL DEFAULT '',
+      depends_on TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'STATUS_UNKNOWN',
+      failure_kind TEXT NOT NULL DEFAULT '', failure_points TEXT NOT NULL DEFAULT '[]',
+      compiler_output TEXT NOT NULL DEFAULT '', verified_upto INTEGER NOT NULL DEFAULT 0,
+      verified_ranges TEXT NOT NULL DEFAULT '[]', attempt INTEGER NOT NULL DEFAULT 1,
       notes TEXT NOT NULL DEFAULT '', created_at TEXT, updated_at TEXT,
-      UNIQUE (batch_id, oeis_name, formula_hash));
+      UNIQUE (oeis_name, language, formula_hash, producer, lean_kind));
+    CREATE INDEX formalization_item_status_idx ON formalization_item (language, status);
+    CREATE INDEX formalization_item_source_idx ON formalization_item (oeis_name, source_hash);
     INSERT INTO sequence (name, all_unformalized_formulas_text) VALUES ('A1', '[\"f\"]');
     INSERT INTO program (oeis_name, language, block_index, source_tag, text, hash)
       VALUES ('A1', 'maple', 2, 'p', 'x', 'H');
-    INSERT INTO formalization_item (batch_id, oeis_name, source_hash, formula_hash, computable, lean_code)
-      VALUES (7, 'A1', 'H', 'F', 0, 'def formula := 1');"
+    INSERT INTO formalization_item (oeis_name, producer, batch_id, language, block_index,
+        source_hash, formula_hash, original_text, span_start, span_end, lean_code)
+      VALUES ('A1', 'llm', 7, 'maple', 2, 'H', 'blake', 'x', 0, 1, 'def formula := 1');
+    INSERT INTO formalization_item (oeis_name, producer, language, source_hash, formula_hash,
+        original_text, span_start, span_end)
+      VALUES ('A1', 'template:t', 'formula', 'S', 'keepme', 'y', 4, 5);"
   for _ in [0:2] do   -- the second pass checks idempotence
     let db ← Db.openDb path
     let cols ← columns db "sequence"
@@ -126,9 +158,23 @@ private def testMigration (dir : System.FilePath) : IO Unit := do
       && !cols.contains "all_unformalized_formulas_text") "sequence columns migrated"
     check ((← text db "SELECT formula_lines FROM sequence WHERE name = 'A1'") == "[\"f\"]")
       "formula lines survive the column rename"
-    check ((← text db "SELECT producer || '/' || lean_kind || '/' || block_index || '/' || batch_id
-      FROM formalization_item") == "llm/noncomputable/2/7") "legacy item keeps its data"
-    check ((← text db "SELECT lean_code FROM formalization_item") == "def formula := 1") "lean_code kept"
+    let itemCols ← columns db "formalization_item"
+    check (!itemCols.contains "original_text" && !itemCols.contains "language") "text columns moved out"
+    check ((← scalar db "SELECT COUNT(*) FROM formalization_item") == 2) "both items kept"
+    check ((← text db "SELECT s.language || '/' || s.block_index || '/' || s.source_hash || '/' ||
+      s.original_text || '/' || s.span_start || '-' || s.span_end || '/' || s.ord
+      FROM formalization_source s JOIN formalization_item i ON i.id = s.item_id
+      WHERE i.producer = 'llm'") == "maple/2/H/x/0-1/0") "legacy item keeps its text as source 0"
+    check ((← text db "SELECT lean_code FROM formalization_item WHERE producer = 'llm'")
+      == "def formula := 1") "lean_code kept"
+    check ((← text db "SELECT formula_hash FROM formalization_item WHERE producer = 'llm'")
+      == formulaHash "x") "an LLM hash becomes the hash of its text"
+    check ((← text db "SELECT formula_hash FROM formalization_item WHERE producer = 'template:t'")
+      == "keepme") "template hashes are kept"
+  let db ← Db.openDb path
+  db.exec "DELETE FROM formalization_item WHERE producer = 'template:t';"
+  check ((← scalar db "SELECT COUNT(*) FROM formalization_source") == 1)
+    "deleting an item deletes its sources"
 
 public def main : IO UInt32 := do
   IO.FS.withTempDir fun dir => do

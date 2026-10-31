@@ -217,3 +217,33 @@ Progress is never written in `AGENTS.md`.
 - **2026-10-29** — Reverted the open-items part of the change above at the user's request: open items and next steps are written in AGENTS.md again. RULE 1, the RULE reminder and the Decisions bullet in AGENTS.md now say so. Progress is still kept in this file. No code changed.
 - **2026-10-30** — Ported `GenExpr`, `GenExprTests`, and `Scripts` to Lean's explicit module system. Exported existing APIs and runtime/meta import edges, exposed the `Residue.membersUpTo` body needed by its exported definitional-equality theorem, and documented the module/build conventions in `Impl/BuildAndCache.md`. The combined library/executable build completed successfully (9,898 jobs). `lake exe genexpr-test --engine internal` passed 34 checks with one Lean-engine-only case skipped; `lake exe oeis-template-test` passed.
 - **2026-10-31** — Confirmed `Metadata/oeis.db` already matched `.gitignore` but remained tracked. Staged its removal from the index without deleting the local database; updated the repository notes. Existing tracked `OEISLib` files remain tracked, while new files there are ignored except under `Common/`.
+- **2026-10-31** — `linearRecurrence`, the first *scan* template, and multi-source items.
+  * *Storage.* `formalization_item` lost its text columns; every original text of an item is a row of the
+    new `formalization_source` (`ord`, `language`, `block_index`, `source_hash`, `original_text`,
+    `span_start`/`span_end`; `ON DELETE CASCADE`). `formula_hash` is the `String.hash` of the texts joined
+    with a newline in canonical order; unique on `(oeis_name, producer, formula_hash, lean_kind)`. The Lean
+    schema (`schemaSql`, `rebuildLegacyItems`) moved the 20,673 old rows into item + source rows and rehashed
+    the 6 LLM rows; the real DB was migrated (backup of the old one in `/tmp`, not kept in the repo).
+    `Candidate.sources`, `Source.start?`, `canonical`, `itemHash`, `Accepted` in `Base.lean`; `publish`
+    rewrites sources, cascades deletions, claims the first computable item whose first source is the title.
+    `TemplateKind` (`family`/`scan`), `--verbose`, scan skips only counted, `--force` clears stale scan items.
+    The four family templates were ported to `sources`.
+  * *Python LLM side.* New `formalize/hashing.py` (Lean's `String.hash` = MurmurHash64A seed 11, checked
+    against 80 stored `program.hash` values and the template hashes), `db.py` rewritten to read/write sources
+    and to refuse an unmigrated DB (no more DDL in Python), `upsert_item(conn, batch_id, sources, **fields)`,
+    `sequence_spans`, `item_sources`, `select_programs` / `stats` through sources, `view.py` colours all sources
+    of an item alike, blake2b `snippet_hash` removed. `formalize.selftest`, `stats`, `show --seq`, `show
+    --batch-id` and `upsert_item` verified on the migrated DB.
+  * *Bug found.* The roots of all `lean_exe`s had a private `main` (module system), so `oeis-ingest`,
+    `oeis-gen`, `oeis-cache` and `oeis-template` ran Mathlib's exporter `main` instead; now `public def main`.
+  * *Template.* `Scripts/Templates/LinearRecurrence/{Lin,Core,Statement,Mathematica,Programs,Scripting}.lean` and
+    `Scripts/Templates/LinearRecurrence.lean`: homogeneous constant-coefficient recurrences from the title,
+    `%F`, `%C`, Wolfram (`LinearRecurrence`, `RecurrenceTable`, `a[n_] :=`), PARI, Maple, Magma, Python/Sage and
+    Haskell; initial values always from the data, stated values and program output cross-checked; same
+    coefficient list = one item with all texts as sources; title recurrence = main definition; Lean shape
+    `LinearRecurrence DType` with `linearrec`/`init` in `aux_code`, `formula_eq` against `«main».fn` with `sorry`.
+    Constant and `n`-dependent terms are skipped by decision. Full run: 29,365 sequences, 29,767 items,
+    1,471 main definitions, about one minute (a recurrence of order 25 trillion made the first run run out of
+    memory; orders above 1000 are refused). 275 stored items rendered into a scratch file compile.
+    `#guard` suite `Tests/LinearRecurrenceTest.lean`; `oeis-template-test` covers multi-source `publish` and the
+    migration. Docs: `Impl/Templates.md`, `Impl/Database.md`, `Impl/BuildAndCache.md`, `FORMALIZE.md`.

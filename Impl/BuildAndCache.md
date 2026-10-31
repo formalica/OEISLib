@@ -12,6 +12,11 @@ definitions are used both ways import the dependency in both modes.
 `OEISLib.Common.Residue.membersUpTo` is marked `@[expose]` because the exported theorem
 `selectFrom_primesUpTo` relies on its body for definitional equality.
 
+The root module of every `lean_exe` (`oeis-ingest`, `oeis-gen`, `oeis-cache`, `oeis-template`,
+`oeis-template-test`) must declare `public def main`. A private `main` is mangled and not emitted as
+the program entry point; the binary then links and runs another `main` (a Mathlib dependency's
+exporter, which prints `{"meta":{"exporter":...` and fails on the arguments).
+
 ## Lake configuration
 
 Common linter options are configured in `lakefile.toml`, not in generated Lean files. The current

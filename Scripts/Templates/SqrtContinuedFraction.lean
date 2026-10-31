@@ -134,8 +134,7 @@ private def mainTerm (d : Nat) (prependOne : Bool) : String :=
   else s!"fun n => {lib}.computed {d} n"
 
 def mainDefinition (d : Nat) (title : String) (prependOne : Bool) (verified : Nat) : Candidate where
-  language := Section.maindef
-  originalText := title
+  sources := #[{ language := Section.maindef, originalText := title }]
   argKind := "Nat"
   leanType := "Nat → Nat"
   leanCode := mainTerm d prependOne
@@ -178,9 +177,7 @@ def snippet (d : Nat) (h : Hit) (s : Snippet) (verified : Nat) : Candidate :=
       s!"have hi : i < {s.count} := by\n" ++
       s!"  simpa [«self», {lib}.program_length] using h\n" ++
       s!"exact {lib}.program_getElem? {d} {s.count} i hi"
-  { language := h.language
-    blockIndex := h.blockIndex
-    originalText := h.text
+  { sources := #[h.source]
     argKind := "Nat"
     leanType := "List Nat"
     leanCode := s!"{lib}.program {d} {s.count} {s.prependOne}"

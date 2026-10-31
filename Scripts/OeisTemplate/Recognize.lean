@@ -87,12 +87,17 @@ def codeEnd (line : String) : Nat := Id.run do
 
 /-! ### Snippet hits -/
 
-/-- A recognized snippet: `text` is a verbatim slice of the line it came from. -/
+/-- A recognized snippet: `text` is a verbatim slice of the section starting at character
+`start` of the section text. -/
 structure Hit where
   language : String
   blockIndex : Nat
   flavor : String
   text : String
+  start : Nat := 0
+
+def Hit.source (h : Hit) : Source :=
+  { language := h.language, blockIndex := h.blockIndex, originalText := h.text, start? := some h.start }
 
 /-- A line recognizer returns the end position of the code it recognizes at the line start. -/
 abbrev LineRecognizer := String × (String → Option Nat)
@@ -108,6 +113,11 @@ def hitsInText (language : String) (blockIndex : Nat) (text : String)
   let mut out : Array Hit := #[]
   let mut keys := seen
   let lines := (text.splitOn "\n").toArray
+  let mut lineStart : Array Nat := #[]
+  let mut pos := 0
+  for l in lines do
+    lineStart := lineStart.push pos
+    pos := pos + l.length + 1
   for width in [1:maxLines + 1] do
     for i in [0:lines.size] do
       if i + width > lines.size then break
@@ -118,7 +128,7 @@ def hitsInText (language : String) (blockIndex : Nat) (text : String)
           let hit := (run.take stop).toString
           let key := if byText then hit else flavor
           unless hit.trimAscii.isEmpty || keys.contains key do
-            out := out.push { language, blockIndex, flavor, text := hit }
+            out := out.push { language, blockIndex, flavor, text := hit, start := lineStart[i]! }
             keys := keys.push key
   return out
 

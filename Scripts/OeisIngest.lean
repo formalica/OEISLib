@@ -91,7 +91,7 @@ def run (cfg : Config) : IO Stats := do
 end
 end Oeis.Ingest
 
-def main (args : List String) : IO UInt32 := do
+public def main (args : List String) : IO UInt32 := do
   match Oeis.Ingest.parseArgs args with
   | .error msg =>
     IO.eprintln s!"error: {msg}"

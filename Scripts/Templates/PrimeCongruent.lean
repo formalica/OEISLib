@@ -118,8 +118,7 @@ private def paramsJson (p : Params) (bound : Nat) (extra : String := "") : Strin
   s!"\{\"a\":{p.a},\"m\":{p.m},\"bound\":{bound}{extra}}"
 
 def mainDefinition (p : Params) (title : String) (bound verified : Nat) : Candidate where
-  language := Section.maindef
-  originalText := title
+  sources := #[{ language := Section.maindef, originalText := title }]
   argKind := "PNat"
   leanType := "PNat → Nat"
   leanCode := s!"fun n => {lib}.nthIn {p.a} {p.m} (n.val - 1) {bound}"
@@ -128,9 +127,7 @@ def mainDefinition (p : Params) (title : String) (bound verified : Nat) : Candid
   params := paramsJson p bound
 
 private def base (p : Params) (h : Hit) (bound verified : Nat) : Candidate where
-  language := h.language
-  blockIndex := h.blockIndex
-  originalText := h.text
+  sources := #[h.source]
   argKind := "PNat"
   imports := #[lib]
   verifiedUpto := verified

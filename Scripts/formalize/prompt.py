@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from pathlib import Path
 
@@ -18,10 +17,6 @@ IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 #: How many already-formalized definitions of a referenced sequence to show.
 ALT_DEFS_PER_DEP = 3
 
-
-def snippet_hash(text: str) -> str:
-    """Stable 16 hex-char identifier for an extracted program snippet."""
-    return hashlib.blake2b(text.encode("utf-8"), digest_size=8).hexdigest()
 
 
 class Skill:

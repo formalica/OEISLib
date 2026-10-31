@@ -85,7 +85,7 @@ lake build oeis-ingest && lake exe oeis-ingest
 - match the requested `language`,
 - belong to a sequence with at least one known term,
 - are **not** `tabl` / `tabf` — multi-parameter sequences are out of scope for now,
-- have no `formalization_item` with the same `source_hash` (unless `--include-attempted`).
+- have no `formalization_source` row with the same `source_hash` (unless `--include-attempted`).
 
 The CLI additionally drops sequences whose `OEISLib/.../Defs.lean` does not exist yet, because
 the generated `Equiv` file imports it.
@@ -191,7 +191,7 @@ the first characters match, too short, every candidate overlaps — and are fed 
 the repair round.
 
 `original_text` still exists downstream: it is the resolved `block[start:end]`, and it is what
-the `Equiv_<hash>` file name and `formula_hash` are derived from.
+the `Equiv_<hash>` file name and `formula_hash` (`hex(String.hash)` of it) are derived from.
 
 ### 5.2 Gaps: what nobody formalized
 
@@ -236,7 +236,9 @@ Two further rejections happen in `_validate`:
 
 ### 6.1 `Equiv_<hash>.lean`
 
-`<hash>` is a blake2b-64 of `original_text`, so the same snippet always maps to the same file.
+`<hash>` is `hex(String.hash original_text)` (Lean's `String.hash`, ported in
+`Scripts/formalize/hashing.py` and the same function the Lean tools use), so the same snippet always
+maps to the same file.
 
 ```lean
 import OEISLib.A001.A001006.Defs
@@ -380,14 +382,13 @@ the Python side.
 
 ### `formalization_item`
 
-One row per program the model extracted. `UNIQUE (batch_id, oeis_name, formula_hash)`.
+One row per program the model extracted. `UNIQUE (oeis_name, producer, formula_hash, lean_kind)`;
+the original text and its span are in `formalization_source` (one row, `ord = 0`, for an LLM item).
 
 | Column | Notes |
 | --- | --- |
-| `batch_id`, `oeis_name`, `language` | |
-| `source_hash` | `program.hash` of the block it came from |
-| `formula_hash` | blake2b-64 of the resolved `original_text`; also the `Equiv_<hash>` file name |
-| `original_text`, `span_start`, `span_end` | the resolved span of the block |
+| `batch_id`, `oeis_name`, `producer` | `producer = 'llm'` |
+| `formula_hash` | `hex(String.hash)` of the resolved `original_text`; also the `Equiv_<hash>` file name |
 | `computable`, `arg_kind`, `lean_code` | model output |
 | `lean_file`, `check_file` | generated paths |
 | `depends_on` | JSON array of referenced A-numbers |
@@ -396,6 +397,12 @@ One row per program the model extracted. `UNIQUE (batch_id, oeis_name, formula_h
 | `compiler_output` | truncated to 20 kB |
 | `verified_upto` | number of terms actually checked |
 | `attempt`, `notes`, `created_at`, `updated_at` | |
+
+### `formalization_source`
+
+One row per original text of an item: `item_id`, `ord`, `language`, `block_index`,
+`source_hash` (`program.hash` of the block), `original_text`, `span_start`, `span_end` (NULL for a
+rejected item, whose text could not be placed). `PRIMARY KEY (item_id, ord)`, `ON DELETE CASCADE`.
 
 ### `skill_suggestion`
 

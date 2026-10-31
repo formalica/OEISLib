@@ -140,7 +140,7 @@ def run (cfg : Config) : IO Unit := do
 end
 end Oeis.Gen
 
-def main (args : List String) : IO UInt32 := do
+public def main (args : List String) : IO UInt32 := do
   match Oeis.Gen.parseArgs args with
   | .error msg =>
     IO.eprintln s!"error: {msg}"

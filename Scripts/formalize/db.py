@@ -1,8 +1,8 @@
 """SQLite access for the formalization pipeline.
 
-The schema itself is owned by `Scripts/OeisIngest/Db.lean`; this module only reads and writes.
-`ensure_schema` exists so the Python side still works against a database created before the
-formalization tables were added.
+The schema is owned by `Scripts/OeisIngest/Db.lean` (`oeis-ingest`, `oeis-template` and `oeis-gen`
+create and migrate it); this module only reads and writes, and refuses a database that has not
+been migrated yet.
 """
 
 from __future__ import annotations
@@ -12,98 +12,8 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
+from .hashing import formula_hash
 from .models import BATCH_PENDING
-
-MIGRATION_SQL = """
-CREATE TABLE IF NOT EXISTS formalization_batch (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  language     TEXT NOT NULL DEFAULT 'maple',
-  model        TEXT NOT NULL DEFAULT '',
-  status       TEXT NOT NULL DEFAULT 'BATCH_PENDING',
-  oeis_names   TEXT NOT NULL DEFAULT '[]',
-  attempts     INTEGER NOT NULL DEFAULT 0,
-  max_attempts INTEGER NOT NULL DEFAULT 1,
-  chat_history TEXT NOT NULL DEFAULT '[]',
-  skill_text   TEXT NOT NULL DEFAULT '',
-  last_error   TEXT NOT NULL DEFAULT '',
-  usage        TEXT NOT NULL DEFAULT '{}',
-  created_at   TEXT,
-  updated_at   TEXT
-);
-
-CREATE TABLE IF NOT EXISTS formalization_item (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  oeis_name       TEXT NOT NULL,
-  producer        TEXT NOT NULL DEFAULT 'llm',
-  producer_params TEXT NOT NULL DEFAULT '{}',
-  batch_id        INTEGER,
-  language        TEXT NOT NULL DEFAULT 'maple',
-  block_index     INTEGER NOT NULL DEFAULT 0,
-  source_hash     TEXT NOT NULL DEFAULT '',
-  formula_hash    TEXT NOT NULL,
-  original_text   TEXT NOT NULL DEFAULT '',
-  span_start      INTEGER,
-  span_end        INTEGER,
-  lean_kind       TEXT NOT NULL DEFAULT 'computable',
-  arg_kind        TEXT NOT NULL DEFAULT '',
-  lean_type       TEXT NOT NULL DEFAULT '',
-  lean_code       TEXT NOT NULL DEFAULT '',
-  imports         TEXT NOT NULL DEFAULT '[]',
-  aux_code        TEXT NOT NULL DEFAULT '',
-  eq_statement    TEXT NOT NULL DEFAULT '',
-  eq_proof        TEXT NOT NULL DEFAULT '',
-  data_eq_proof   TEXT,
-  data_eq_aux     TEXT,
-  lean_file       TEXT NOT NULL DEFAULT '',
-  check_file      TEXT NOT NULL DEFAULT '',
-  depends_on      TEXT NOT NULL DEFAULT '[]',
-  status          TEXT NOT NULL DEFAULT 'STATUS_UNKNOWN',
-  failure_kind    TEXT NOT NULL DEFAULT '',
-  failure_points  TEXT NOT NULL DEFAULT '[]',
-  compiler_output TEXT NOT NULL DEFAULT '',
-  verified_upto   INTEGER NOT NULL DEFAULT 0,
-  verified_ranges TEXT NOT NULL DEFAULT '[]',
-  attempt         INTEGER NOT NULL DEFAULT 1,
-  notes           TEXT NOT NULL DEFAULT '',
-  created_at      TEXT,
-  updated_at      TEXT,
-  UNIQUE (oeis_name, language, formula_hash, producer, lean_kind)
-);
-
-CREATE INDEX IF NOT EXISTS formalization_item_batch_idx ON formalization_item (batch_id);
-CREATE INDEX IF NOT EXISTS formalization_item_seq_idx ON formalization_item (oeis_name);
-CREATE INDEX IF NOT EXISTS formalization_item_status_idx
-  ON formalization_item (language, status);
-
-CREATE TABLE IF NOT EXISTS skill_suggestion (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  batch_id   INTEGER,
-  language   TEXT NOT NULL DEFAULT 'maple',
-  kind       TEXT NOT NULL DEFAULT 'note',
-  text       TEXT NOT NULL,
-  applied    INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS program_gap (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  batch_id    INTEGER,
-  oeis_name   TEXT NOT NULL,
-  language    TEXT NOT NULL DEFAULT 'maple',
-  source_hash TEXT NOT NULL DEFAULT '',
-  span_start  INTEGER NOT NULL,
-  span_end    INTEGER NOT NULL,
-  text        TEXT NOT NULL DEFAULT '',
-  status      TEXT NOT NULL DEFAULT 'STATUS_UNFORMALIZED',
-  reason      TEXT NOT NULL DEFAULT '',
-  created_at  TEXT,
-  updated_at  TEXT,
-  UNIQUE (oeis_name, language, source_hash, span_start, span_end)
-);
-
-CREATE INDEX IF NOT EXISTS program_gap_seq_idx ON program_gap (oeis_name, language);
-CREATE INDEX IF NOT EXISTS program_gap_status_idx ON program_gap (language, status);
-"""
 
 
 @dataclass
@@ -118,60 +28,30 @@ class ProgramRow:
     keywords: list[str]
 
 
+@dataclass
+class SourceRow:
+    """One original text of an item: where it sits and what it says."""
+
+    language: str
+    block_index: int
+    source_hash: str
+    original_text: str
+    span_start: int | None = None
+    span_end: int | None = None
+
+
 def connect(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path, timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL;")
-    conn.executescript(MIGRATION_SQL)
-    _migrate(conn)
-    conn.commit()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    if "formalization_source" not in tables:
+        raise RuntimeError(
+            f"{db_path} has an outdated schema (no `formalization_source` table); run "
+            "`.lake/build/bin/oeis-template <template> --seq A000001 --dry-run` once to migrate it"
+        )
     return conn
-
-
-def _columns(conn: sqlite3.Connection, table: str) -> set[str]:
-    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
-
-
-def _migrate(conn: sqlite3.Connection) -> None:
-    """Mirror of `migrate` in `Scripts/OeisIngest/Db.lean`; keep the two in step."""
-    if "producer" not in _columns(conn, "formalization_item"):
-        _rebuild_item_table(conn)
-    conn.executescript(
-        """
-CREATE INDEX IF NOT EXISTS formalization_item_producer_idx
-  ON formalization_item (producer, language, status);
-CREATE INDEX IF NOT EXISTS formalization_item_source_idx
-  ON formalization_item (oeis_name, source_hash);
-"""
-    )
-
-
-def _rebuild_item_table(conn: sqlite3.Connection) -> None:
-    drops = "".join(
-        f"DROP INDEX IF EXISTS formalization_item_{n}_idx;" for n in ("batch", "seq", "status")
-    )
-    conn.executescript(
-        "BEGIN;ALTER TABLE formalization_item RENAME TO formalization_item_old;"
-        + drops
-        + MIGRATION_SQL
-        + """
-INSERT OR REPLACE INTO formalization_item
-  (id, oeis_name, producer, batch_id, language, block_index, source_hash, formula_hash,
-   original_text, span_start, span_end, lean_kind, arg_kind, lean_code, lean_file,
-   check_file, depends_on, status, failure_kind, failure_points, compiler_output,
-   verified_upto, attempt, notes, created_at, updated_at)
-SELECT o.id, o.oeis_name, 'llm', o.batch_id, o.language,
-       COALESCE((SELECT p.block_index FROM program p
-                 WHERE p.oeis_name = o.oeis_name AND p.hash = o.source_hash LIMIT 1), 0),
-       o.source_hash, o.formula_hash, o.original_text, o.span_start, o.span_end,
-       CASE o.computable WHEN 0 THEN 'noncomputable' ELSE 'computable' END,
-       o.arg_kind, o.lean_code, o.lean_file, o.check_file, o.depends_on, o.status,
-       o.failure_kind, o.failure_points, o.compiler_output, o.verified_upto, o.attempt,
-       o.notes, o.created_at, o.updated_at
-FROM formalization_item_old o ORDER BY o.id;
-DROP TABLE formalization_item_old;
-COMMIT;"""
-    )
 
 
 def _row_to_program(row: sqlite3.Row) -> ProgramRow:
@@ -208,8 +88,9 @@ def select_programs(
     params: list[object] = [language]
     if not include_attempted:
         where.append(
-            "NOT EXISTS (SELECT 1 FROM formalization_item fi "
-            "WHERE fi.oeis_name = p.oeis_name AND fi.source_hash = p.hash)"
+            "NOT EXISTS (SELECT 1 FROM formalization_source fs "
+            "JOIN formalization_item fi ON fi.id = fs.item_id "
+            "WHERE fi.oeis_name = p.oeis_name AND fs.source_hash = p.hash)"
         )
     if seqs:
         where.append("p.oeis_name IN (%s)" % ",".join("?" * len(seqs)))
@@ -290,26 +171,61 @@ def load_batch(conn: sqlite3.Connection, batch_id: int) -> sqlite3.Row | None:
     ).fetchone()
 
 
-def upsert_item(conn: sqlite3.Connection, batch_id: int, **fields: object) -> None:
+_SECTION_RANK = {"maindef": 0, "formula": 1, "comment": 2}
+
+
+def canonical_sources(sources: list[SourceRow]) -> list[SourceRow]:
+    """Title, formulas, comments, then programs; the order `publish` in Lean stores them in."""
+    return sorted(
+        sources,
+        key=lambda s: (
+            _SECTION_RANK.get(s.language, 3),
+            s.language,
+            s.block_index,
+            s.span_start or 0,
+        ),
+    )
+
+
+def upsert_item(
+    conn: sqlite3.Connection, batch_id: int, sources: list[SourceRow], **fields: object
+) -> str:
+    """Writes one item and replaces its sources; returns its `formula_hash`, the hash of its
+    original texts joined with a newline."""
+    ordered = canonical_sources(sources)
+    hash_ = formula_hash([s.original_text for s in ordered])
     fields.setdefault("producer", "llm")
     fields.setdefault("lean_kind", "computable")
-    if "block_index" not in fields:
-        block = conn.execute(
-            "SELECT block_index FROM program WHERE oeis_name = ? AND hash = ? LIMIT 1",
-            (fields.get("oeis_name"), fields.get("source_hash")),
-        ).fetchone()
-        fields["block_index"] = block[0] if block else 0
+    fields["formula_hash"] = hash_
     cols = ["batch_id", *fields.keys()]
     values = [batch_id, *fields.values()]
     updates = ", ".join(f"{k} = excluded.{k}" for k in ["batch_id", *fields])
     conn.execute(
         f"""INSERT INTO formalization_item ({', '.join(cols)}, created_at, updated_at)
             VALUES ({', '.join('?' * len(cols))}, datetime('now'), datetime('now'))
-            ON CONFLICT(oeis_name, language, formula_hash, producer, lean_kind)
+            ON CONFLICT(oeis_name, producer, formula_hash, lean_kind)
             DO UPDATE SET {updates}, updated_at = datetime('now')""",
         values,
     )
+    item_id = conn.execute(
+        """SELECT id FROM formalization_item
+           WHERE oeis_name = ? AND producer = ? AND formula_hash = ? AND lean_kind = ?""",
+        (fields["oeis_name"], fields["producer"], hash_, fields["lean_kind"]),
+    ).fetchone()[0]
+    conn.execute("DELETE FROM formalization_source WHERE item_id = ?", (item_id,))
+    conn.executemany(
+        """INSERT INTO formalization_source
+             (item_id, ord, language, block_index, source_hash, original_text,
+              span_start, span_end)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        [
+            (item_id, n, s.language, s.block_index, s.source_hash, s.original_text,
+             s.span_start, s.span_end)
+            for n, s in enumerate(ordered)
+        ],
+    )
     conn.commit()
+    return hash_
 
 
 def batch_items(conn: sqlite3.Connection, batch_id: int) -> list[sqlite3.Row]:
@@ -318,6 +234,21 @@ def batch_items(conn: sqlite3.Connection, batch_id: int) -> list[sqlite3.Row]:
             "SELECT * FROM formalization_item WHERE batch_id = ? ORDER BY oeis_name", (batch_id,)
         )
     )
+
+
+def item_sources(
+    conn: sqlite3.Connection, item_ids: list[int]
+) -> dict[int, list[sqlite3.Row]]:
+    """Every source of the given items, in canonical order."""
+    out: dict[int, list[sqlite3.Row]] = {i: [] for i in item_ids}
+    if not item_ids:
+        return out
+    sql = "SELECT * FROM formalization_source WHERE item_id IN (%s) ORDER BY item_id, ord" % (
+        ",".join("?" * len(item_ids))
+    )
+    for row in conn.execute(sql, item_ids):
+        out[row["item_id"]].append(row)
+    return out
 
 
 def sequence_programs(
@@ -331,11 +262,14 @@ def sequence_programs(
     return list(conn.execute(sql + " ORDER BY language, block_index", params))
 
 
-def sequence_items(conn: sqlite3.Connection, oeis_name: str) -> list[sqlite3.Row]:
+def sequence_spans(conn: sqlite3.Connection, oeis_name: str) -> list[sqlite3.Row]:
+    """Every source of every item of the sequence, with the item's hash and status."""
     return list(
         conn.execute(
-            """SELECT * FROM formalization_item WHERE oeis_name = ?
-               ORDER BY source_hash, span_start, id""",
+            """SELECT i.id AS item_id, i.formula_hash, i.status, s.*
+               FROM formalization_item i JOIN formalization_source s ON s.item_id = i.id
+               WHERE i.oeis_name = ?
+               ORDER BY s.source_hash, s.span_start, i.id""",
             (oeis_name,),
         )
     )
@@ -402,8 +336,10 @@ def add_skill_suggestions(
 def stats(conn: sqlite3.Connection, language: str) -> list[sqlite3.Row]:
     return list(
         conn.execute(
-            """SELECT status, COUNT(*) AS n FROM formalization_item
-               WHERE language = ? GROUP BY status ORDER BY n DESC""",
+            """SELECT i.status, COUNT(*) AS n FROM formalization_item i
+               WHERE EXISTS (SELECT 1 FROM formalization_source s
+                             WHERE s.item_id = i.id AND s.language = ?)
+               GROUP BY i.status ORDER BY n DESC""",
             (language,),
         )
     )

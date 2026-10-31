@@ -146,8 +146,7 @@ private def paramsJson (p : Params) (extra : String := "") : String :=
   s!"\{\"g\":{p.g},\"r\":{p.r}{extra}}"
 
 def mainDefinition (p : Params) (title : String) (verified : Nat) : Candidate where
-  language := Section.maindef
-  originalText := title
+  sources := #[{ language := Section.maindef, originalText := title }]
   argKind := "Nat"
   leanType := "Nat → Nat"
   leanCode := s!"fun n => {lib}.coxSeq {p.g} {p.r} n"
@@ -157,9 +156,7 @@ def mainDefinition (p : Params) (title : String) (verified : Nat) : Candidate wh
 
 /-- `formula = coeffsUpTo g r k` and its pointwise agreement with the main definition. -/
 def snippet (p : Params) (h : Hit) (k verified : Nat) : Candidate where
-  language := h.language
-  blockIndex := h.blockIndex
-  originalText := h.text
+  sources := #[h.source]
   argKind := "Nat"
   leanType := "List Nat"
   leanCode := s!"{lib}.coeffsUpTo {p.g} {p.r} {k}"

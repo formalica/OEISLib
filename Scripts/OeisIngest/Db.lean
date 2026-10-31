@@ -97,13 +97,7 @@ def schemaSql : String :=
      producer        TEXT NOT NULL DEFAULT 'llm',
      producer_params TEXT NOT NULL DEFAULT '{}',
      batch_id        INTEGER,
-     language        TEXT NOT NULL DEFAULT 'maple',
-     block_index     INTEGER NOT NULL DEFAULT 0,
-     source_hash     TEXT NOT NULL DEFAULT '',
      formula_hash    TEXT NOT NULL,
-     original_text   TEXT NOT NULL DEFAULT '',
-     span_start      INTEGER,
-     span_end        INTEGER,
      lean_kind       TEXT NOT NULL DEFAULT 'computable',
      arg_kind        TEXT NOT NULL DEFAULT '',
      lean_type       TEXT NOT NULL DEFAULT '',
@@ -127,13 +121,32 @@ def schemaSql : String :=
      notes           TEXT NOT NULL DEFAULT '',
      created_at      TEXT,
      updated_at      TEXT,
-     UNIQUE (oeis_name, language, formula_hash, producer, lean_kind)
+     UNIQUE (oeis_name, producer, formula_hash, lean_kind)
    );
 
    CREATE INDEX IF NOT EXISTS formalization_item_batch_idx ON formalization_item (batch_id);
    CREATE INDEX IF NOT EXISTS formalization_item_seq_idx ON formalization_item (oeis_name);
-   CREATE INDEX IF NOT EXISTS formalization_item_status_idx
-     ON formalization_item (language, status);
+   CREATE INDEX IF NOT EXISTS formalization_item_producer_status_idx
+     ON formalization_item (producer, status);
+
+   -- Every original text of an item, in canonical order (`ord` from 0). `formula_hash` of the
+   -- item is the hash of these texts joined with a newline.
+   CREATE TABLE IF NOT EXISTS formalization_source (
+     item_id       INTEGER NOT NULL REFERENCES formalization_item (id) ON DELETE CASCADE,
+     ord           INTEGER NOT NULL,
+     language      TEXT NOT NULL,
+     block_index   INTEGER NOT NULL DEFAULT 0,
+     source_hash   TEXT NOT NULL DEFAULT '',
+     original_text TEXT NOT NULL DEFAULT '',
+     span_start    INTEGER,
+     span_end      INTEGER,
+     PRIMARY KEY (item_id, ord)
+   );
+
+   CREATE INDEX IF NOT EXISTS formalization_source_language_idx
+     ON formalization_source (language);
+   CREATE INDEX IF NOT EXISTS formalization_source_hash_idx
+     ON formalization_source (source_hash);
 
    CREATE TABLE IF NOT EXISTS skill_suggestion (
      id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,8 +229,8 @@ private def tableColumns (db : SQLite) (table : String) : IO (Array String) := d
     cols := cols.push (← stmt.columnText 1)
   return cols
 
-/-- Moves a database created by an older schema to the current one. Idempotent; mirrored by
-`_migrate` in `Scripts/formalize/db.py`. -/
+/-- Moves a database created by an older schema to the current one. Idempotent. Runs after
+`schemaSql`, so every table exists. -/
 def migrate (db : SQLite) : IO Unit := do
   let seqCols ← tableColumns db "sequence"
   if seqCols.contains "all_unformalized_formulas_text" && !seqCols.contains "formula_lines" then
@@ -226,40 +239,54 @@ def migrate (db : SQLite) : IO Unit := do
     db.exec "ALTER TABLE sequence ADD COLUMN comment_lines TEXT NOT NULL DEFAULT '[]';"
   unless seqCols.contains "main_item_id" do
     db.exec "ALTER TABLE sequence ADD COLUMN main_item_id INTEGER;"
-  -- `formalization_item` gained a producer; SQLite cannot drop `batch_id NOT NULL`, so rebuild.
-  let itemCols ← tableColumns db "formalization_item"
-  unless itemCols.contains "producer" do
-    db.exec ("BEGIN;
-      ALTER TABLE formalization_item RENAME TO formalization_item_old;
-      DROP INDEX IF EXISTS formalization_item_batch_idx;
-      DROP INDEX IF EXISTS formalization_item_seq_idx;
-      DROP INDEX IF EXISTS formalization_item_status_idx;" ++ schemaSql ++ "
-      INSERT OR REPLACE INTO formalization_item
-        (id, oeis_name, producer, batch_id, language, block_index, source_hash, formula_hash,
-         original_text, span_start, span_end, lean_kind, arg_kind, lean_code, lean_file,
-         check_file, depends_on, status, failure_kind, failure_points, compiler_output,
-         verified_upto, attempt, notes, created_at, updated_at)
-      SELECT o.id, o.oeis_name, 'llm', o.batch_id, o.language,
-             COALESCE((SELECT p.block_index FROM program p
-                       WHERE p.oeis_name = o.oeis_name AND p.hash = o.source_hash LIMIT 1), 0),
-             o.source_hash, o.formula_hash, o.original_text, o.span_start, o.span_end,
-             CASE o.computable WHEN 0 THEN 'noncomputable' ELSE 'computable' END,
-             o.arg_kind, o.lean_code, o.lean_file, o.check_file, o.depends_on, o.status,
-             o.failure_kind, o.failure_points, o.compiler_output, o.verified_upto, o.attempt,
-             o.notes, o.created_at, o.updated_at
-      FROM formalization_item_old o ORDER BY o.id;
-      DROP TABLE formalization_item_old;
-      COMMIT;")
-  db.exec "CREATE INDEX IF NOT EXISTS formalization_item_producer_idx
-             ON formalization_item (producer, language, status);
-           CREATE INDEX IF NOT EXISTS formalization_item_source_idx
-             ON formalization_item (oeis_name, source_hash);"
+
+/-- Until `formalization_source` existed, an item carried its one original text in its own
+columns. Moves such a table to the current shape: one source row per item, and the hash of an
+LLM item recomputed as `formulaHash` of that text (it used to be blake2b). Must run *before*
+`schemaSql`, so that the child table's foreign key points at the rebuilt item table. -/
+private def rebuildLegacyItems (db : SQLite) : IO Unit := do
+  unless (← tableColumns db "formalization_item").contains "original_text" do return
+  db.exec ("BEGIN;
+    ALTER TABLE formalization_item RENAME TO formalization_item_old;
+    DROP INDEX IF EXISTS formalization_item_batch_idx;
+    DROP INDEX IF EXISTS formalization_item_seq_idx;
+    DROP INDEX IF EXISTS formalization_item_status_idx;
+    DROP INDEX IF EXISTS formalization_item_producer_idx;
+    DROP INDEX IF EXISTS formalization_item_source_idx;" ++ schemaSql ++ "
+    INSERT INTO formalization_item
+      (id, oeis_name, producer, producer_params, batch_id, formula_hash, lean_kind, arg_kind,
+       lean_type, lean_code, imports, aux_code, eq_statement, eq_proof, data_eq_proof,
+       data_eq_aux, lean_file, check_file, depends_on, status, failure_kind, failure_points,
+       compiler_output, verified_upto, verified_ranges, attempt, notes, created_at, updated_at)
+    SELECT id, oeis_name, producer, producer_params, batch_id, formula_hash, lean_kind, arg_kind,
+       lean_type, lean_code, imports, aux_code, eq_statement, eq_proof, data_eq_proof,
+       data_eq_aux, lean_file, check_file, depends_on, status, failure_kind, failure_points,
+       compiler_output, verified_upto, verified_ranges, attempt, notes, created_at, updated_at
+    FROM formalization_item_old ORDER BY id;
+    INSERT INTO formalization_source
+      (item_id, ord, language, block_index, source_hash, original_text, span_start, span_end)
+    SELECT id, 0, language, block_index, source_hash, original_text, span_start, span_end
+    FROM formalization_item_old;
+    DROP TABLE formalization_item_old;")
+  let llm ← db.prepare
+    "SELECT id, original_text FROM formalization_item
+       JOIN formalization_source ON item_id = id AND ord = 0 WHERE producer = 'llm'"
+  let mut rows : Array (Int64 × String) := #[]
+  while ← llm.step do
+    rows := rows.push ((← llm.columnInt64 0), (← llm.columnText 1))
+  for (id, text) in rows do
+    let upd ← db.prepare "UPDATE formalization_item SET formula_hash = ?2 WHERE id = ?1"
+    upd.bindInt64 1 id
+    upd.bindText 2 (formulaHash text)
+    upd.exec
+  db.exec "COMMIT;"
 
 def openDb (path : System.FilePath) : IO SQLite := do
   if let some parent := path.parent then
     IO.FS.createDirAll parent
   let db ← SQLite.«open» path (busyTimeoutMs := 5000)
-  db.exec "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;"
+  db.exec "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;"
+  rebuildLegacyItems db
   db.exec schemaSql
   migrate db
   return db

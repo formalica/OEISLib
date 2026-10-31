@@ -3,6 +3,8 @@ public import Scripts.OeisTemplate.Recognize
 public meta import Scripts.OeisTemplate.Recognize
 public import Scripts.OeisIngest.Json
 public meta import Scripts.OeisIngest.Json
+public import Scripts.OeisIngest.Parse
+public meta import Scripts.OeisIngest.Parse
 
 /-! `#guard` tests for the pure parts of the template infrastructure; a failure breaks `lake build`. -/
 
@@ -20,11 +22,11 @@ private def src : SeqSource where
   commentLines := #["First comment"]
   programs := #[{ language := "pari", blockIndex := 0, text := "a(n)=n+1\nb(n)=2", hash := "h" }]
 
-private def cand (language text : String) (blockIndex : Nat := 0) : Candidate :=
+private def cand (language text : String) (blockIndex : Nat := 0) : Source :=
   { language, blockIndex, originalText := text }
 
-private def spanOf (c : Candidate) : Option (Nat × Nat) :=
-  (locate src c).toOption.map fun (s, e, _) => (s, e)
+private def spanOf (s : Source) : Option (Nat × Nat) :=
+  (locate src s).toOption.map fun p => (p.start, p.stop)
 
 /-! ### `locate`: the original-text check -/
 
@@ -44,7 +46,29 @@ private def spanOf (c : Candidate) : Option (Nat × Nat) :=
 #guard spanOf (cand "maindef" "   ") == none
 #guard spanOf (cand "magma" "a") == none
 -- the source hash of a program section is the stored `program.hash`
-#guard (locate src (cand "pari" "a(n)=n+1")).toOption.map (·.2.2) == some "h"
+#guard (locate src (cand "pari" "a(n)=n+1")).toOption.map (·.sourceHash) == some "h"
+
+-- a position hint selects the occurrence; a hint that does not point at the text is refused
+#guard spanOf { cand "pari" "n" with start? := some 2 } == some (2, 3)
+#guard spanOf { cand "pari" "n" with start? := some 0 } == none
+
+/-! ### Sources of one item: canonical order and identity -/
+
+private def placed (s : Source) : Placed :=
+  (locate src s).toOption.get!
+
+private def order (ss : List Source) : List String :=
+  (canonical (ss.map placed).toArray).toList.map (·.src.originalText)
+
+-- title, formulas, comments, programs; whatever order the template lists them in
+#guard order [cand "pari" "b(n)=2", cand "comment" "comment", cand "formula" "b(n) = 2*n",
+    cand "maindef" "groups of order"] == ["groups of order", "b(n) = 2*n", "comment", "b(n)=2"]
+-- two sources at the same place are one source
+#guard (order [cand "pari" "b(n)=2", cand "pari" "b(n)=2"]).length == 1
+-- the identity of an item is the hash of its texts joined with a newline
+#guard itemHash #[placed (cand "pari" "b(n)=2")] == formulaHash "b(n)=2"
+#guard itemHash (canonical #[placed (cand "pari" "b(n)=2"), placed (cand "formula" "b(n) = 2*n")])
+    == formulaHash "b(n) = 2*n\nb(n)=2"
 
 #guard findSub? (chars "abcabc") (chars "ca") == some 2
 #guard findSub? (chars "abc") (chars "abcd") == none
@@ -68,6 +92,9 @@ private def whole (want : String) : List LineRecognizer :=
 -- a flavor yields one hit unless `byText` asks for every distinct text
 #guard (hitsInText "formula" 0 "x\nx\ny" [("f", fun t => some t.length)]).size == 1
 #guard (hitsInText "formula" 0 "x\nx\ny" [("f", fun t => some t.length)] (byText := true)).size == 2
+-- a hit remembers where its line starts in the section text
+#guard (hitsInText "formula" 0 "ab\ncd" [("f", fun t => if t == "cd" then some 2 else none)]).map
+  (·.start) == #[3]
 
 #guard endAfterSemicolon (chars "foo ; // x") 3 == 5
 #guard endAfterSemicolon (chars "foo // x") 3 == 3

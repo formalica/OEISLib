@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"no program blocks stored for {name}", file=sys.stderr)
                 return 1
             view.show_sequence(
-                programs, dbm.sequence_items(conn, name), dbm.sequence_gaps(conn, name),
+                programs, dbm.sequence_spans(conn, name), dbm.sequence_gaps(conn, name),
                 name, paint,
             )
             return 0
@@ -106,9 +106,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"batch {args.batch_id} not found", file=sys.stderr)
             return 1
         history = load_history(batch["chat_history"]) if args.history else []
+        items = dbm.batch_items(conn, args.batch_id)
         view.show_batch(
             batch,
-            dbm.batch_items(conn, args.batch_id),
+            items,
+            dbm.item_sources(conn, [i["id"] for i in items]),
             dbm.batch_gaps(conn, args.batch_id),
             history,
             paint,

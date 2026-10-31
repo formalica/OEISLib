@@ -221,8 +221,7 @@ private def paramsJson (steps : Array Step) (extra : String := "") : String :=
   s!"\{\"steps\":\"{stepsLit steps}\"{extra}}"
 
 def mainDefinition (steps : Array Step) (title : String) (verified : Nat) : Candidate where
-  language := Section.maindef
-  originalText := title
+  sources := #[{ language := Section.maindef, originalText := title }]
   argKind := "Nat"
   leanType := "Nat → Nat"
   leanCode := s!"fun n => {lib}.count {stepsLit steps} n"
@@ -233,9 +232,7 @@ def mainDefinition (steps : Array Step) (title : String) (verified : Nat) : Cand
 /-- The dynamic program, equal to the high-level walk count. -/
 def program (steps : Array Step) (h : Hit) (verified : Nat) : Candidate :=
   let lit := s!"({stepsLit steps} : List {lib}.Pnt)"
-  { language := h.language
-    blockIndex := h.blockIndex
-    originalText := h.text
+  { sources := #[h.source]
     argKind := "Nat"
     leanType := "Nat → Nat"
     leanCode := s!"{lib}.countDp {lit}"

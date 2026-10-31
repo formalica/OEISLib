@@ -5,7 +5,7 @@ should contain impl details and parts of implementation which contradict with Sp
 | Document | Describes |
 | --- | --- |
 | [Database.md](Database.md) | `Metadata/oeis.db`: tables, columns, row counts |
-| [Templates.md](Templates.md) | `oeis-template`: runner, interface, the four templates, how to add one |
+| [Templates.md](Templates.md) | `oeis-template`: runner, interface, the five templates (family and scan), how to add one |
 | [BuildAndCache.md](BuildAndCache.md) | Spec.md section `Build and cache` (empty) |
 | [Formalization.md](Formalization.md) | Spec.md section `Formalization` (empty) |
 | [GenExprParser.md](GenExprParser.md) | Spec.md section `GenExprParser` (empty) |

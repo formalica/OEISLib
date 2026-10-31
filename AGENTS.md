@@ -2,6 +2,8 @@
 
 Instructions for AI agents working in this repository. The dated progress log is in [PROGRESS.md](PROGRESS.md).
 (VS Code / Copilot automatically loads `AGENTS.md`, so this is the file to keep current.)
+we do not need to preserve compatibility of db or anything else, no one use this db or project yet, it is internal db and project, and only we using it to keep data, so we are free to do any chnages which we want. do not make workarounds
+
 
 ## RULE 0 — Keep `Impl/` up to date (MANDATORY)
 
@@ -57,8 +59,16 @@ official OEIS "internal format").
 Step 1 of SPEC.md (metadata tables) is **done**, and the `Defs.lean` / `Data.lean` skeleton
 generator is **done**. The **Maple → Lean LLM formalization pipeline is implemented** (see
 [FORMALIZE.md](FORMALIZE.md)); `%F` formula parsing / real main definitions are not started.
-**`oeis-template` writes `formalization_item`** (four templates, 20,667 items; see
+**`oeis-template` writes `formalization_item`** (five templates, 50,440 items in all; see
 [Impl/Templates.md](Impl/Templates.md)) instead of generating Lean files; `oeis-gen` does not yet read items.
+Four are *family* templates picked by title; `linearRecurrence` is a *scan* template that finds
+homogeneous linear recurrences in every section (title, `%F`, `%C`, Wolfram/PARI/Maple/Magma/Python/
+Sage/Haskell programs), dedups them, and stores all their original texts as the item's sources
+(29,767 items over 29,365 sequences, 1,471 of them main definitions).
+
+An item has one or more original texts: they live in `formalization_source`, one row each, and
+the item's `formula_hash` is the `String.hash` of the texts joined with a newline. The Python LLM
+pipeline uses the same schema and hash.
 
 The ingest executable walks `oeisdata/seq`, parses every `.seq` file, and populates a SQLite
 database at `Metadata/oeis.db` (git-ignored, ~360 MB). The generator reads that DB and writes
@@ -107,7 +117,7 @@ import each sequence, and `OEISLib/{Defs,Data}.lean` import each bucket.
 | [Scripts/OeisCache.lean](Scripts/OeisCache.lean) | `prune` / `stat` / `put` / `get` for `.lake/build` artifacts |
 | [Scripts/OeisTemplate.lean](Scripts/OeisTemplate.lean) | `oeis-template` runner: selection, transaction, reporting |
 | [Scripts/OeisTemplate/](Scripts/OeisTemplate/) | `Source` (`SeqSource` loaded from the DB), `Base` (`Candidate`, `Template`, `locate`, `publish` = the only writer), `Recognize` (cursor toolkit, `codeEnd`, `hits`, `checkPrefix`), `Tests` (`#guard`), `IntegrationTest` (`oeis-template-test`) |
-| [Scripts/Templates/](Scripts/Templates/) | `Registry` + one module per template: `Coxeter`, `PrimeCongruent`, `SqrtContinuedFraction` (+ `…Test`), `WalkN3` |
+| [Scripts/Templates/](Scripts/Templates/) | `Registry` + one module per template: `Coxeter`, `PrimeCongruent`, `SqrtContinuedFraction` (+ `…Test`), `WalkN3`, `LinearRecurrence` (+ `LinearRecurrence/{Lin,Core,Statement,Mathematica,Programs,Scripting}`, `Tests/LinearRecurrenceTest`) |
 | [OEISLib/Common/](OEISLib/Common/) | shared math of the families (`OEISLib.Common.Coxeter`, `Residue`, `SqrtContinuedFraction`, `Walk3`); `OEISLib` lean_lib |
 | [Impl/Templates.md](Impl/Templates.md) | template contract, runner, the four templates, authoring guide, differences from Spec.md |
 | [GenExpr/](GenExpr/) | standalone expression parser (see [Spec.md](Spec.md) §GenExprParser) |
@@ -116,7 +126,7 @@ import each sequence, and `OEISLib/{Defs,Data}.lean` import each bucket.
 | [FORMALIZE.md](FORMALIZE.md) | design doc for the LLM formalization pipeline |
 | [Skills/maple/SKILL.md](Skills/maple/SKILL.md) | Maple→Lean instructions + filterable function table |
 | [Check/Basic.lean](Check/Basic.lean) | `Oeis.Check.report`, throws on term mismatch so `lake build` fails |
-| [Scripts/formalize/](Scripts/formalize/) | the Python pipeline (`config`, `db`, `models`, `prompt`, `render`, `lean`, `agent`, `pipeline`, `spans`, `view`, `selftest`, `__main__`) |
+| [Scripts/formalize/](Scripts/formalize/) | the Python pipeline (`config`, `db`, `hashing`, `models`, `prompt`, `render`, `lean`, `agent`, `pipeline`, `spans`, `view`, `selftest`, `__main__`) |
 | [Impl/Database.md](Impl/Database.md) | current DB tables, row counts, and differences from Spec.md |
 | [Impl/README.md](Impl/README.md) | index of the `Impl/` documents and their conventions (RULE 0) |
 | [PROGRESS.md](PROGRESS.md) | dated progress log (RULE 1) |
@@ -176,27 +186,28 @@ PRIMARY KEY `(oeis_name, language, block_index)`; indexes on `language`, `hash`,
 | `language` | `maple` (`%p`), `mathematica` (`%t`), or the lowercased `(Lang)` marker of `%o` |
 | `source_tag` | `p` / `t` / `o` |
 | `text` | block verbatim; `%p`/`%t` split at `# Alternative`, `%o` split at each `(Lang)` |
-| `hash` | `String.hash`, 16 hex chars — used as `formalization_item.source_hash` |
+| `hash` | `String.hash`, 16 hex chars — used as `formalization_source.source_hash` |
 | `line_count`, `status` | |
 
 ### `formalization_batch` / `formalization_item` / `program_gap` / `skill_suggestion`
 
 `formalization_item` is the unified table of formalizations, written by the Python LLM pipeline
-(`producer = 'llm'`) and by templates (`producer = 'template:<name>'`). One row = one stretch of
-original text (`language` = `maindef` / `formula` / `comment` / program language, `block_index`,
-`span_start`/`span_end` in characters, `original_text`) plus name-free Lean content
-(`lean_kind`, `lean_type`, `lean_code`, `imports`, `aux_code`, `eq_statement`, `eq_proof`;
-`«self»` / `«main»` placeholders) and verification (`status`, `verified_upto`, `verified_ranges`).
-Unique on `(oeis_name, language, formula_hash, producer, lean_kind)`. Column list and gap to the
-Spec: [Impl/Database.md](Impl/Database.md). `Db.migrate` (Lean) and `_migrate` (Python) upgrade an
-older DB in place.
+(`producer = 'llm'`) and by templates (`producer = 'template:<name>'`). One row = one formalization:
+name-free Lean content (`lean_kind`, `lean_type`, `lean_code`, `imports`, `aux_code`, `eq_statement`,
+`eq_proof`; `«self»` / `«main»` placeholders) and verification (`status`, `verified_upto`,
+`verified_ranges`). Its original texts are rows of `formalization_source` (`ord` from 0, `language` =
+`maindef` / `formula` / `comment` / program language, `block_index`, `source_hash`, `original_text`,
+`span_start`/`span_end` in characters; `ON DELETE CASCADE`). `formula_hash` is the `String.hash` of
+the texts joined with a newline. Unique on `(oeis_name, producer, formula_hash, lean_kind)`. Column list
+and gap to the Spec: [Impl/Database.md](Impl/Database.md). Only the Lean side owns the schema
+(`schemaSql`, `migrate`, `rebuildLegacyItems` in `Db.lean`); Python refuses an unmigrated DB.
 
 The LLM-side tables are created by the Lean ingest's `schemaSql`.
 Full column list in [FORMALIZE.md](FORMALIZE.md#10-database). Key points:
 `formalization_batch.chat_history` stores serialized pydantic-ai messages (that is what makes
 `retry --batch-id` continue the same conversation), `skill_text` stores the filtered skill the
 model actually saw, and `formalization_item.failure_points` stores the disagreeing indices as
-`[{"n":…,"expected":…,"got":…}]`. `formalization_item.span_start`/`span_end` locate the item
+`[{"n":…,"expected":…,"got":…}]`. `formalization_source.span_start`/`span_end` locate each text
 inside its block; `program_gap` holds the **complement** — every stretch of a program block no
 item claimed, as `STATUS_UNFORMALIZED` (a real missed program) or `STATUS_GAP_TRIVIAL`
 (whitespace / stray delimiters / an author-credit comment). Gap rows are rewritten wholesale
@@ -218,8 +229,9 @@ lake build oeis-cache
 lake exe oeis-cache <prune|stat|put|get> [--archive PATH] [--manifest PATH] [--build-dir PATH] [--level N] [--force]
 
 lake build oeis-template oeis-template-test
-.lake/build/bin/oeis-template <walkN3|coxeter|primeCongruent|sqrtContinuedFraction>
-    (--all | --bucket A147 | --seq A147999) [--force] [--dry-run] [--limit N] [--db PATH] [--check-cap=K]
+.lake/build/bin/oeis-template <walkN3|coxeter|primeCongruent|sqrtContinuedFraction|linearRecurrence>
+    (--all | --bucket A147 | --seq A147999) [--force] [--dry-run] [--limit N] [--verbose] [--db PATH]
+    [--check-cap=K] [--min-extra=N]   # --min-extra is linearRecurrence only
 lake exe oeis-template-test      # DB integration test; `lake build Scripts` runs the #guard suites
 # `lake exe` replays library warnings on every call; the binary under .lake/build/bin is quieter.
 
@@ -324,6 +336,24 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 - **`verified_definitions` offers the LLM only `producer = 'llm'` rows** until lean_code conventions are unified.
 - **Differences from Spec.md tables are sorted by importance, most important row first** (RULE 0).
 - **Progress is kept in PROGRESS.md. Open items and next steps are written in AGENTS.md. The existing open items list stays here until it is moved.**
+
+- **Every original text of an item is a `formalization_source` row; there is no "primary" text.**
+  No compatibility columns or views: the DB is internal, so schema changes rewrite it (a one-time
+  rebuild migrates old rows). `formula_hash` = `String.hash` of the texts joined with a newline in
+  canonical order (title, `%F`, `%C`, programs); the LLM pipeline uses it too (Python port in
+  `formalize/hashing.py`, checked against `program.hash`).
+- **Two kinds of templates**: *family* (picked by title, rebuilds the exact text) and *scan*
+  (`TemplateKind.scan`, finds and parses texts of one shape anywhere; `selectWhere` is only a
+  prefilter, skips are counted not printed, `--force` deletes the items of a sequence it no
+  longer matches).
+- **`linearRecurrence` formalizes only homogeneous constant-coefficient recurrences stated as
+  such** (`a(n) = c1*a(n-1) + …`); a constant or `n`-dependent term is skipped, not repaired.
+  The initial values are always the first `k` published terms; stated values and a program's own
+  output are only cross-checked. Same coefficient list = same item; all its texts are its sources.
+  `a(n) = 1 + a(n-1)` is therefore not formalized. Item shape: `LinearRecurrence DType` with
+  `linearrec` / `init` in `aux_code`, `DType` = `Int` when the sequence or the recurrence has a
+  negative number (then `Int.toNat` for a `Nat` sequence), `formula_eq` against `«main».fn` stays
+  `sorry`; a title recurrence is the main definition (no equation).
 
 ### GenExprParser decisions
 
@@ -463,6 +493,14 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
   it need `set_option linter.hashCommand false`.
 - `lake build` with no target also builds the 792k `OEISLib` modules. For this tree use
   `lake build Scripts OEISLib oeis-template oeis-template-test oeis-ingest oeis-gen`.
+- **The root module of a `lean_exe` must declare `public def main`.** A private `main` is mangled;
+  the binary then runs another `main` (a Mathlib dependency's exporter: it prints
+  `{"meta":{"exporter":...`). All five exe roots are fixed.
+- A structure instance whose first field is on the `{` line needs the following fields to start at
+  that column; put the first field on its own line (`{ x with` newline `a := 1,` ...), or the parser
+  fails with "expected '}'". A nested string literal inside `s!"…{f "x"}…"` does not parse; bind it first.
+- A `partial def` over `Array Char` that builds an array of size `k` from input must be bounded
+  first (`a(n+25239592216021) = a(n)` made a 25-trillion element array: out of memory).
 
 ## Open items / next steps
 
@@ -515,7 +553,7 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
     * `main_definition_hash` (NULL, unused) vs `main_item_id`; `unformalized_formula_hashes`,
       `formalized_formula_hashes` and the `formula` table are redundant and can be dropped.
     * `status`: no stage writes `STATUS_COMPLETE` / `FORMALIZED` / `DEFINED` / `NOT_STARTED`.
-    * Python LLM rows still store `lean_code` with names and hash with blake2b.
+    * Python LLM rows still store `lean_code` with names.
     * `Spec/Database.md` is empty, so the per-argument offset algorithm is undefined.
     * `oeis-show` is not in [lakefile.toml](lakefile.toml). `python -m formalize show` covers program blocks only.
 15. **Fix `program.language` defects.** 517 rows hold values like `+`, `0 to 49`, `1 to 50` from `%o` parsing.
@@ -524,18 +562,23 @@ No `sqlite3` CLI on this machine; inspect the DB with `python3 -c "import sqlite
 17. **Render items into files.** `oeis-gen` must read `formalization_item` (`--hash`, per sequence) and emit
     `Defs` / `Equiv_<hash>` / `Basic_<hash>` from `maindef` / template items: `def formula : lean_type :=
     lean_code`, `theorem formula_eq : eq_statement := by eq_proof`, `«self»`→`formula`, `«main»`→`Axxxxxx`.
-    Until then the content is validated only by hand-rendering scratch files (all four templates, 180
-    random sequences, 0 errors).
+    Until then the content is validated only by hand-rendering scratch files (all five templates: 180
+    random sequences of the family templates and 275 random `linearRecurrence` items, 0 errors).
 18. **Template follow-ups.** coxeter `formula` items are `List Nat`, not the Spec's value form; 859
     coxeter sequences have a g.f. in another shape (degree `r-1`) that no recognizer covers; the old
     primeCongruent `nth_spec` theorem, the isolated `lean` compile check and `pruneTemplateRows` of the
     sqrt template are gone (verification moves to `oeis-verify`); more families from `Scripts/templates.txt`.
 19. **`oeis-verify`** (Spec): verify items from the table against data, update `verified_ranges`; this will
     also cover noncomputable items and re-check template rows.
-20. **Python selftest not re-run** after the schema change (`formalize.selftest` builds Lean files); `stats`,
-    `show --seq`, the Python migration and `upsert_item` were exercised on scratch copies.
+20. **`formalize` live path** is still unexercised after the schema change: `formalize.selftest`, `stats`,
+    `show --seq` and `upsert_item` pass offline on the migrated DB, a real model run has not been done.
 21. **Sort the existing Differences from Spec.md tables** in [Impl/Database.md](Impl/Database.md) and
     [Impl/Templates.md](Impl/Templates.md) by importance, as RULE 0 now requires.
+22. **`linearRecurrence` follow-ups.** Not recognized yet: rational g.f. texts (belong to a PowerSeries
+    template per Spec), matrix-power and `Nest`/`Fold` programs, PARI `vector` loops, recurrences that only
+    hold from a later index than their order (needs a prefix list), non-homogeneous ones (skipped by
+    decision), other function names in `%F`/`%C`. `show --seq` still colours program blocks only, and
+    `mkSol` is exponential if `oeis-verify` ever evaluates these items in Lean at large `n`.
 
 ## RULE reminder
 

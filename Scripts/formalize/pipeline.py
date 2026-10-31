@@ -12,6 +12,7 @@ from . import db as dbm
 from . import lean
 from .agent import build_agent, build_learning_agent, dump_history, load_history
 from .config import CHECK_LIB, Config
+from .hashing import formula_hash
 from .models import (
     BATCH_FAILED,
     BATCH_OK,
@@ -29,7 +30,7 @@ from .models import (
     BatchResult,
     FormalizedProgram,
 )
-from .prompt import ALT_DEFS_PER_DEP, Skill, batch_prompt, repair_prompt, snippet_hash
+from .prompt import ALT_DEFS_PER_DEP, Skill, batch_prompt, repair_prompt
 from .render import (
     RenderedItem,
     SeqInfo,
@@ -206,7 +207,7 @@ def _validate(
             accepted.append(
                 RenderedItem(
                     seq=seq,
-                    formula_hash=snippet_hash(original_text),
+                    formula_hash=formula_hash([original_text]),
                     original_text=original_text,
                     lean_code=item.lean_code,
                     arg_kind=item.arg_kind,
@@ -289,7 +290,7 @@ def _persist(
     cfg: Config,
     batch_id: int,
     attempt: int,
-    source_hash: dict[str, str],
+    blocks: dict[str, dbm.ProgramRow],
     items: list[RenderedItem],
     statuses: dict[str, tuple[str, list[str]]],
 ) -> None:
@@ -297,16 +298,21 @@ def _persist(
         status, diags = statuses.get(item.key, (STATUS_VERIFIED, []))
         offset = item.seq.offset
         points = lean.parse_failure_points(diags, offset) if diags else []
+        block = blocks[item.seq.name]
         dbm.upsert_item(
             conn,
             batch_id,
+            [
+                dbm.SourceRow(
+                    language=cfg.language,
+                    block_index=block.block_index,
+                    source_hash=block.source_hash,
+                    original_text=item.original_text,
+                    span_start=item.span_start,
+                    span_end=item.span_end,
+                )
+            ],
             oeis_name=item.seq.name,
-            language=cfg.language,
-            source_hash=source_hash.get(item.seq.name, ""),
-            formula_hash=item.formula_hash,
-            original_text=item.original_text,
-            span_start=item.span_start,
-            span_end=item.span_end,
             lean_kind="computable" if item.computable else "noncomputable",
             arg_kind=item.arg_kind,
             lean_code=item.lean_code,
@@ -398,6 +404,7 @@ def run_batch(
     dbm.update_batch(conn, batch_id, status=BATCH_RUNNING, skill_text=skill)
 
     source_hash = {row.oeis_name: row.source_hash for row in rows}
+    blocks = {row.oeis_name: row for row in rows}
     status = BATCH_FAILED
     accepted: list[RenderedItem] = []
     # On a resumed batch the previous failures are the starting feedback.
@@ -444,7 +451,7 @@ def run_batch(
         for item in accepted:
             if not item.computable:
                 statuses[item.key] = (STATUS_NONCOMPUTABLE, [])
-        _persist(conn, cfg, batch_id, attempts_done, source_hash, accepted, statuses)
+        _persist(conn, cfg, batch_id, attempts_done, blocks, accepted, statuses)
         _persist_gaps(conn, cfg, batch_id, source_hash, rows, block_gaps)
         _cleanup(cfg, batch_id, [item for item, _, _ in failed])
 
@@ -467,14 +474,16 @@ def run_batch(
                 f"```\n{joined}\n```"
             )
         pending_feedback += [g.render() for g in open_gaps]
+        # An accepted item with the same text already says more than the rejection would.
+        accepted_keys = {(i.seq.name, i.formula_hash) for i in accepted}
         for r in rejected:
+            block = blocks.get(r.oeis_name, rows[0])
+            if (block.oeis_name, formula_hash([r.snippet])) in accepted_keys:
+                continue
             dbm.upsert_item(
                 conn, batch_id,
-                oeis_name=r.oeis_name if r.oeis_name in seq_infos else rows[0].oeis_name,
-                language=cfg.language,
-                source_hash=source_hash.get(r.oeis_name, ""),
-                formula_hash=snippet_hash(r.snippet + r.reason),
-                original_text=r.snippet,
+                [dbm.SourceRow(cfg.language, block.block_index, block.source_hash, r.snippet)],
+                oeis_name=block.oeis_name,
                 status=STATUS_REJECTED,
                 failure_kind=STATUS_REJECTED,
                 compiler_output=r.reason,
